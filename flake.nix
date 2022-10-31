@@ -18,6 +18,7 @@
           numpy
 	  sympy
           matplotlib
+	  sortedcontainers
         '';
       });
     };
