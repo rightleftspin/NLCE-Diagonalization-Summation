@@ -12,6 +12,7 @@ def symmetricHashFunction(graph):
     # This function takes a graph as an input and returns a hash that corresponds
     # uniquely to the shape of the graph. Namely, it converts it to minimum 
     # vertex type numbering and hashses the minimum vertex type tuple
+    global sqrAdj
     vertexTypeGraph = ()
     # Graph needs to be ordered so that the vertex type tuple is truly
     # unique for each graph
@@ -30,8 +31,17 @@ def symmetricHashFunction(graph):
     return(hash(vertexTypeGraph))
 
 def isomorphicHashFunction(graph):
-    # Use the nauty certificate function here if it is possible
-    return("test")
+    ######### NEEDS MORE OPTIMIZATION ############
+    global sqrAdj
+    graphList = list(graph)
+    graphObj = pynauty.Graph(len(graph))
+    for index, node in enumerate(graphList):
+        for adjNode in sqrAdj:
+            checkNode = (node[0] + adjNode[0], node[1] + adjNode[1])
+            if checkNode in graph:
+                graphObj.connect_vertex(index, graphList.index(checkNode)) 
+
+    return(hash(pynauty.certificate(graphObj)))
 
 def addGraph(graph):
     # This function takes a graph and adds it to the graphDictionary if it doesn't already exist
@@ -125,10 +135,9 @@ def generateSquareLattice(size):
 
     return(testGraph)
 
-
 testGraph = generateSquareLattice(11)
 
 start = time.time()
-enumerateGraph(testGraph, 8, (5, 5))
+enumerateGraph(testGraph, 6, (5, 5))
 print(time.time() - start)
-print(graphDict["test"][1])
+print(len(graphDict))
