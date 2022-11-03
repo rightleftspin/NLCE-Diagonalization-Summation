@@ -1,4 +1,7 @@
 from sortedcontainers import SortedList
+import sys
+
+sys.setrecursionlimit(300)
 # The main goal of this code is to provide a library for generating hashes from a specific graph
 # in general, this
 #
@@ -123,3 +126,68 @@ symmetricHashList = SortedList()
 
 testGraph1 = [(0,0), (1, 0), (0, 1), (1, 1), (2, 1), (1, 2)]
 testGraph2 = []
+gCounter = set()
+
+def symHash(graph):
+    minGraph = min(graph)
+    shiftedGraph = frozenset(map(lambda x: (x[0] - minGraph[0], x[1] - minGraph[1]), graph))
+    return(hash(shiftedGraph))
+
+def enumerateGraph(graph, size):
+    guardingSet = set()
+    #for vertex in graph:
+    vertex = (5, 5)
+    neighbors = graph[vertex]
+    vSimple(graph, {vertex}, neighbors.difference(guardingSet), guardingSet, size)
+    guardingSet = guardingSet | {vertex}
+
+def vSimple(graph, subgraph, neighbors, guardingSet, size):
+    if len(subgraph) == size:
+        global gCounter
+        gCounter.add(hash(minimumVertexTypeNotation(subgraph, symmetricNumbering)))
+        return(True)
+    
+    hasIntLeaf = False
+    for neighbor in neighbors:
+        newSubgraph = subgraph | {neighbor}
+        addNeighbors = graph[neighbor]
+        newNeighbors = neighbors.difference({neighbor}) | (addNeighbors.difference(newSubgraph).difference(guardingSet))
+
+        if vSimple(graph, newSubgraph, newNeighbors, guardingSet, size):
+            hasIntLeaf = True
+        else:
+            break
+
+        guardingSet = guardingSet | {neighbor}
+        if (len(graph) - len(guardingSet)) < size:
+            break
+
+    return(hasIntLeaf)
+
+
+#Generate test 11 by 11 graph
+size = 11
+testVert = set()
+testGraph = {}
+for x in range(size):
+    for y in range(size):
+        testVert.add((x, y))
+        testGraph[(x, y)] = set()
+
+
+squareAdjecencyPossibilities = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+for vert in testVert:
+    for adj in squareAdjecencyPossibilities:
+        edge = (vert[0] + adj[0], vert[1] + adj[1])
+        if edge in testVert:
+            testGraph[vert].add(edge)
+
+#print(testGraph)
+    
+#testGraph = {(0, 0): {(1, 0), (0, 1)}, (1, 0): {(0, 0), (1, 1)}, (1, 1):{(1, 0), (0, 1)}, (0, 1):{(1, 1), (0, 0)}}
+import time
+
+start = time.time()
+enumerateGraph(testGraph, 7)
+print(time.time() - start)
+print(len(gCounter))
