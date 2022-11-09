@@ -2,6 +2,7 @@ import time
 import math
 
 import pynauty
+import hashlib
 
 # Three Global Variables to be decided upon
 clusterSize = int(input("Cluster Size? "))
@@ -105,7 +106,9 @@ def isomorphicHashFunction(graph):
                 graphNauty.connect_vertex(index, graphList.index(adjVertex))
 
     # Return the hash of the pynauty certificate of the graph
-    return(hash(pynauty.certificate(graphNauty)))
+    hexhash = hashlib.md5(pynauty.certificate(graphNauty)).hexdigest()
+    #return(pynauty.certificate(graphNauty))
+    return(int(hexhash,  16))
 
 def addSubgraph(isoHash, subgraph):
     global clusterDict
@@ -255,3 +258,37 @@ print(f"Total Graphs x Isomorphic Subclusters: {totalBrokenDown}")
 #        print(clusterDict[isoHash][2][subgraph][0])
 #        print(clusterDict[isoHash][2][subgraph][1])
 #    print("-----------------------------")
+
+
+def turnGraphToEdgeSet(graph):
+    global setLattice
+    edgeSet = set()
+    listGraph = list(graph)
+    for index, vertex in enumerate(listGraph):
+        adjVertices = setLattice[vertex].intersection(graph)
+        for adj in adjVertices:
+            edge = (index, listGraph.index(adj))
+            edge2 = (listGraph.index(adj), index)
+            if (edge not in edgeSet) and (edge2 not in edgeSet):
+                edgeSet.add(edge)
+    return(edgeSet)
+
+writeFile = open(f"NLCE_Triangles_1_{clusterSize}.txt", 'w')
+writeFile.write(f"{clusterSize}\n")
+for isoHash in clusterDict:
+    writeFile.write(f"{isoHash}\n")
+    edgeSet = turnGraphToEdgeSet(clusterDict[isoHash][0])
+    writeFile.write(f"{len(edgeSet)}\n")
+    for edge in edgeSet:
+        writeFile.write(f"{edge[0]}\t{edge[1]}\t1\n")
+    subgraphDict = clusterDict[isoHash][2]
+    writeFile.write(f"{len(subgraphDict)}\n")
+    for subgraphHash in subgraphDict:
+        writeFile.write(f"{len(subgraphDict[subgraphHash][0])}\t{subgraphDict[subgraphHash][1]}\t{subgraphHash}\n")
+    writeFile.write("\n")
+
+writeFile.write(f"# Topo. # : Multp.\n")
+for isoHash in clusterDict:
+    writeFile.write(f"{isoHash}\t{clusterDict[isoHash][1]}\n")
+
+writeFile.close()
