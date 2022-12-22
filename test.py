@@ -1,5 +1,6 @@
 # Testing pynauty stuff?
 
+import time
 import pynauty
 import copy
 
@@ -36,3 +37,27 @@ g3 = g2.copy()
 g3.connect_vertex(1, [2, 3])
 print(g2)
 print(g3)
+
+
+
+
+
+def f(x):
+    return(x*10205)
+
+from multiprocessing import Pool, cpu_count
+p = Pool(processes = cpu_count())
+print(f"Core Count: {cpu_count()}")
+
+l = range(0, 100000)
+
+start = time.time()
+mapped1 = p.map(f, l)
+print(f"Total time is {time.time() - start:.9f}")
+
+start = time.time()
+mapped2 = map(f, l)
+print(f"Total time is {time.time() - start:.9f}")
+
+print(list(mapped1)[0:5])
+print(list(mapped2)[0:5])
