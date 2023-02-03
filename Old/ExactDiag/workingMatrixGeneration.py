@@ -135,7 +135,8 @@ nodeList = [ 1, 2 ]
 sampleLattice.add_nodes_from(nodeList)
 edgeList = [ (1, 2) ]
 sampleLattice.add_edges_from(edgeList)
-pprint(generate_full_hamiltonian_matrix(sampleLattice, possible_spin_states, num_each_spin_state, 'strength', -t, u))
+print(len(generate_all_states(sampleLattice, possible_spin_states, num_each_spin_state)))
+#pprint(generate_full_hamiltonian_matrix(sampleLattice, possible_spin_states, num_each_spin_state, 'strength', -t, u))
 
 #squareLattice = nx.grid_2d_graph(3, 3)
 #spin_states = ["1/2", "-1/2"]

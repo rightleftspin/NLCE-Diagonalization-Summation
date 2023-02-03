@@ -20,7 +20,7 @@
     in
     {
       # enter this python environment by executing `nix shell .`
-      defaultPackage = forAllSystems (system: pkgs: mach-nix.lib."${system}".mkPython {
+      devShell = forAllSystems (system: pkgs: mach-nix.lib."${system}".mkPythonShell {
         requirements = ''
           networkx
           numpy
