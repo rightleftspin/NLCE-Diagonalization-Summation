@@ -24,9 +24,10 @@
         requirements = ''
           networkx
           numpy
-	  sympy
+          sympy
           matplotlib
-	  pynauty
+          pynauty
+          scipy
         '';
       });
     };

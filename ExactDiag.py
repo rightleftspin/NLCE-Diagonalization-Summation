@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from itertools import product
 import numpy as np
+import scipy
+import json
+import multiprocessing as mp
+from functools import partial
 
 # This file contains all the functions nessecary to start with a cluster from the NLCE output (number of sites and bond information)
 # and will return to you the hamiltonian matrix corresponding to the number of particles you want, it should work with any spin types,
@@ -9,13 +13,14 @@ import numpy as np
 # 2) how does the model deal with site information
 # using these, this algorithm can generate the hamiltonian matrix
 
-def ising_kinetic(bond, state, num_spin_states):
+def ising_kinetic(bond, state):
     # Simple kinetic term for the ising model, just uses the bond type to
     # determine the amount of energy
     final_state = []
-    for spin_state in range(num_spin_states):
-        if (state[spin_state][bond[0]] and state[spin_state][bond[1]]):
-            final_state.append((bond[2], hash(state)))
+    if (state[bond[0]] == state[bond[1]]):
+        final_state.append((-bond[2], hash(state)))
+    else:
+        final_state.append((bond[2], hash(state)))
     
     return(final_state)
 
@@ -29,7 +34,7 @@ def hamiltonian(state, num_sites, num_spin_states, bond_info):
     # about the connections (first two numbers) and the bond strength (third number)
     final_state = []
     for bond in bond_info:
-        final_state += ising_kinetic(bond, state, num_spin_states)
+        final_state += ising_kinetic(bond, state)
 
    # for site in range(num_sites):
    #     site_info = [spin_state[site] for spin_state in state]
@@ -37,7 +42,7 @@ def hamiltonian(state, num_sites, num_spin_states, bond_info):
 
     return(final_state)
 
-def generate_states(num_sites, num_particles_spin_sep):
+def generate_states_hubbard(num_sites, num_particles_spin_sep):
     # Takes a number of sites and number of particles per spin type and returns two lists
     # one of all possible states and one of all these states hashed
     num_spin_states = len(num_particles_spin_sep)
@@ -50,6 +55,11 @@ def generate_states(num_sites, num_particles_spin_sep):
         all_possible_states_spin_sep.append(list(filter(state_checker, single_spin)))
 
     all_possible_states = list(product(*all_possible_states_spin_sep))
+
+    return(all_possible_states)
+
+def generate_states_ising(num_sites):
+    all_possible_states = list(product([True, False], repeat=num_sites))
 
     return(all_possible_states)
 
@@ -71,9 +81,121 @@ def generate_hamil_matrix(num_sites, num_particles_spin_sep, bond_info, all_poss
                 
     return(hamil_matrix)
 
-num_sites = 3
-num_particles_spin_sep = [2, 1]
-bond_info_example = [(0, 1, 1), (1, 2, 1)]
+def solve_energies(num_sites, num_particles_spin_sep, bond_info):
 
-all_possible_states = generate_states(num_sites, num_particles_spin_sep)
-hamil_matrix = generate_hamil_matrix(num_sites, num_particles_spin_sep, bond_info_example, all_possible_states)
+    all_possible_states = generate_states_ising(num_sites)
+    hamil_matrix = generate_hamil_matrix(num_sites, num_particles_spin_sep, bond_info, all_possible_states)
+
+    eigenvals = hamil_matrix.diagonal()
+    #eigenvals = scipy.linalg.eigvals(hamil_matrix).real
+
+    return(eigenvals)
+
+def energy_solver(graph_id, order, graph_bond_dict, temperature_array):
+    graph_property_info = {}
+    bond_info = graph_bond_dict[graph_id]
+    energies = solve_energies(order, [], bond_info)
+
+    exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
+    partition_function = exp_energy_temp_matrix.sum(axis=0)
+    energy = np.matmul(energies, exp_energy_temp_matrix)
+
+    final_energies = energy / partition_function
+
+    graph_property_info[graph_id] = list(final_energies)
+
+    return(graph_property_info)
+
+def solve_energy_for_order(data_dir, order, nlce_type, temperature_array):
+
+    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
+    graph_bond_dict = json.load(graph_bond)
+
+    energy_solve_graph = partial(energy_solver, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
+
+    # Parallellize here
+    cpus = mp.cpu_count()
+    pool = mp.Pool(cpus)
+    graph_property_list = list(pool.map(energy_solve_graph, graph_bond_dict.keys()))
+    graph_property_info = {}
+
+    for graph in list(graph_property_list):
+        graph_property_info.update(graph)
+
+    #graph_property_info_json = open(f"{data_dir}/graph_energy_info_{nlce_type}_{order}.json", "w")
+    #json.dump(graph_property_info, graph_property_info_json)
+
+    return(graph_property_info)
+
+def specific_heat_solver(graph_id, order, graph_bond_dict, temperature_array):
+    graph_property_info = {}
+    bond_info = graph_bond_dict[graph_id]
+    energies = solve_energies(order, [], bond_info)
+
+    exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
+    partition_function = exp_energy_temp_matrix.sum(axis=0)
+    energy = np.matmul(energies, exp_energy_temp_matrix)
+    energy_sq = np.matmul(energies ** 2, exp_energy_temp_matrix)
+
+    final_energies = (energy / partition_function) ** 2
+    final_energies_sq = energy_sq / partition_function
+
+    energy_unc = final_energies_sq - final_energies
+    specific_heat = energy_unc / (temperature_array ** 2)
+    graph_property_info[graph_id] = list(specific_heat)
+
+    return(graph_property_info)
+
+
+def solve_specific_heat_for_order(data_dir, order, nlce_type, temperature_array):
+
+    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
+    graph_bond_dict = json.load(graph_bond)
+
+    specific_heat_solve_graph = partial(specific_heat_solver, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
+
+    # Parallellize here
+    cpus = mp.cpu_count()
+    pool = mp.Pool(cpus)
+    graph_property_list = list(pool.map(specific_heat_solve_graph, graph_bond_dict.keys()))
+    graph_property_info = {}
+
+    for graph in list(graph_property_list):
+        graph_property_info.update(graph)
+
+    #graph_property_info_json = open(f"{data_dir}/graph_specific_heat_info_{nlce_type}_{order}.json", "w")
+    #json.dump(graph_property_info, graph_property_info_json)
+
+    return(graph_property_info)
+
+def solve_specific_heat_for_order_slow(data_dir, order, nlce_type, temp_range, granularity):
+
+    temperature_array = np.logspace(temp_range[0], temp_range[1], num=granularity)
+
+    graph_property_info = {}
+
+    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
+    graph_bond_dict = json.load(graph_bond)
+
+    # Parallellize here
+    for graph_id in graph_bond_dict:
+        bond_info = graph_bond_dict[graph_id]
+        energies = solve_energies(order, [], bond_info)
+
+        exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
+        partition_function = exp_energy_temp_matrix.sum(axis=0)
+        energy = np.matmul(energies, exp_energy_temp_matrix)
+        energy_sq = np.matmul(energies ** 2, exp_energy_temp_matrix)
+
+        final_energies = (energy / partition_function) ** 2
+        final_energies_sq = energy_sq / partition_function
+
+        energy_unc = final_energies_sq - final_energies
+        specific_heat = energy_unc / (temperature_array ** 2)
+        graph_property_info[graph_id] = list(specific_heat)
+
+
+    graph_property_info_json = open(f"{data_dir}/graph_energy_info_{nlce_type}_{order}.json", "w")
+    json.dump(graph_property_info, graph_property_info_json)
+
+    return(graph_property_info)
