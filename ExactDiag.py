@@ -5,6 +5,7 @@ import scipy
 import json
 import multiprocessing as mp
 from functools import partial
+import pathlib
 
 # This file contains all the functions nessecary to start with a cluster from the NLCE output (number of sites and bond information)
 # and will return to you the hamiltonian matrix corresponding to the number of particles you want, it should work with any spin types,
@@ -106,27 +107,6 @@ def energy_solver(graph_id, order, graph_bond_dict, temperature_array):
 
     return(graph_property_info)
 
-def solve_energy_for_order(data_dir, order, nlce_type, temperature_array):
-
-    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
-    graph_bond_dict = json.load(graph_bond)
-
-    energy_solve_graph = partial(energy_solver, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
-
-    # Parallellize here
-    cpus = mp.cpu_count()
-    pool = mp.Pool(cpus)
-    graph_property_list = list(pool.map(energy_solve_graph, graph_bond_dict.keys()))
-    graph_property_info = {}
-
-    for graph in list(graph_property_list):
-        graph_property_info.update(graph)
-
-    #graph_property_info_json = open(f"{data_dir}/graph_energy_info_{nlce_type}_{order}.json", "w")
-    #json.dump(graph_property_info, graph_property_info_json)
-
-    return(graph_property_info)
-
 def specific_heat_solver(graph_id, order, graph_bond_dict, temperature_array):
     graph_property_info = {}
     bond_info = graph_bond_dict[graph_id]
@@ -147,55 +127,59 @@ def specific_heat_solver(graph_id, order, graph_bond_dict, temperature_array):
     return(graph_property_info)
 
 
-def solve_specific_heat_for_order(data_dir, order, nlce_type, temperature_array):
+def solve_property_for_order(property_function, property_name, data_dir, order, nlce_type, temperature_array):
 
     graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
     graph_bond_dict = json.load(graph_bond)
 
-    specific_heat_solve_graph = partial(specific_heat_solver, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
+    if not pathlib.Path(f"{data_dir}/graph_{property_name}_info_{nlce_type}_{order}.json").exists():
+        property_solve_graph = partial(property_function, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
 
-    # Parallellize here
-    cpus = mp.cpu_count()
-    pool = mp.Pool(cpus)
-    graph_property_list = list(pool.map(specific_heat_solve_graph, graph_bond_dict.keys()))
-    graph_property_info = {}
+        # Parallellize here
+        cpus = mp.cpu_count()
+        pool = mp.Pool(cpus)
+        graph_property_list = list(pool.map(property_solve_graph, graph_bond_dict.keys()))
+        graph_property_info = {}
 
-    for graph in list(graph_property_list):
-        graph_property_info.update(graph)
+        for graph in graph_property_list:
+            graph_property_info.update(graph)
 
-    #graph_property_info_json = open(f"{data_dir}/graph_specific_heat_info_{nlce_type}_{order}.json", "w")
-    #json.dump(graph_property_info, graph_property_info_json)
-
-    return(graph_property_info)
-
-def solve_specific_heat_for_order_slow(data_dir, order, nlce_type, temp_range, granularity):
-
-    temperature_array = np.logspace(temp_range[0], temp_range[1], num=granularity)
-
-    graph_property_info = {}
-
-    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
-    graph_bond_dict = json.load(graph_bond)
-
-    # Parallellize here
-    for graph_id in graph_bond_dict:
-        bond_info = graph_bond_dict[graph_id]
-        energies = solve_energies(order, [], bond_info)
-
-        exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
-        partition_function = exp_energy_temp_matrix.sum(axis=0)
-        energy = np.matmul(energies, exp_energy_temp_matrix)
-        energy_sq = np.matmul(energies ** 2, exp_energy_temp_matrix)
-
-        final_energies = (energy / partition_function) ** 2
-        final_energies_sq = energy_sq / partition_function
-
-        energy_unc = final_energies_sq - final_energies
-        specific_heat = energy_unc / (temperature_array ** 2)
-        graph_property_info[graph_id] = list(specific_heat)
-
-
-    graph_property_info_json = open(f"{data_dir}/graph_energy_info_{nlce_type}_{order}.json", "w")
-    json.dump(graph_property_info, graph_property_info_json)
+        graph_property_info_json = open(f"{data_dir}/graph_{property_name}_info_{nlce_type}_{order}.json", "w")
+        json.dump(graph_property_info, graph_property_info_json)
+    else:
+        graph_property_info_json = open(f"{data_dir}/graph_{property_name}_info_{nlce_type}_{order}.json")
+        graph_property_info = json.load(graph_property_info_json)
 
     return(graph_property_info)
+
+#def solve_specific_heat_for_order_slow(data_dir, order, nlce_type, temp_range, granularity):
+#
+#    temperature_array = np.logspace(temp_range[0], temp_range[1], num=granularity)
+#
+#    graph_property_info = {}
+#
+#    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
+#    graph_bond_dict = json.load(graph_bond)
+#
+#    # Parallellize here
+#    for graph_id in graph_bond_dict:
+#        bond_info = graph_bond_dict[graph_id]
+#        energies = solve_energies(order, [], bond_info)
+#
+#        exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
+#        partition_function = exp_energy_temp_matrix.sum(axis=0)
+#        energy = np.matmul(energies, exp_energy_temp_matrix)
+#        energy_sq = np.matmul(energies ** 2, exp_energy_temp_matrix)
+#
+#        final_energies = (energy / partition_function) ** 2
+#        final_energies_sq = energy_sq / partition_function
+#
+#        energy_unc = final_energies_sq - final_energies
+#        specific_heat = energy_unc / (temperature_array ** 2)
+#        graph_property_info[graph_id] = list(specific_heat)
+#
+#
+#    graph_property_info_json = open(f"{data_dir}/graph_energy_info_{nlce_type}_{order}.json", "w")
+#    json.dump(graph_property_info, graph_property_info_json)
+#
+#    return(graph_property_info)
