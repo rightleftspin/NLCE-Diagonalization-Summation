@@ -9,11 +9,11 @@ import sys
 
 start = time.time()
 final_order = int(sys.argv[2])
-temp_range = (.5, 3)
+temp_range = (.5, 20)
 nlce_type = sys.argv[1]
-granularity = 100
-solver = ExactDiag.energy_solver
-property_type = "energy"
+granularity = 500
+solver = ExactDiag.specific_heat_solver
+property_type = "specific_heat"
 data_dir = "./data"
 output_dir = "./output"
 temp_grid = np.linspace(temp_range[0], temp_range[1], num=granularity)
