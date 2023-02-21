@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ExactDiag
+import numerical_exact_diagonalization as ed
 import numpy as np
 import json
 import matplotlib.pyplot as plt
@@ -12,16 +12,16 @@ final_order = int(sys.argv[2])
 temp_range = (.5, 20)
 nlce_type = sys.argv[1]
 granularity = 500
-solver = ExactDiag.energy_solver
+solver = ed.energy_solver
 property_type = "energy_heisenberg"
-data_dir = "./data"
+data_dir = "../NLCE_Data"
 output_dir = "./output"
 temp_grid = np.linspace(temp_range[0], temp_range[1], num=granularity)
 weight_dict_ordered = {}
 weight_dict = {}
 
 for order in range(1, final_order + 1):
-    graph_property_info = ExactDiag.solve_property_for_order(solver, property_type, data_dir, order, nlce_type, temp_grid)
+    graph_property_info = ed.solve_property_for_order(solver, property_type, data_dir, order, nlce_type, temp_grid)
 
     subgraph_mult = open(f'{data_dir}/subgraph_mult_{nlce_type}_{order}.json')
     subgraph_mult_dict = json.load(subgraph_mult)
