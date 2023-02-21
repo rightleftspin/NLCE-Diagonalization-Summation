@@ -12,8 +12,8 @@ final_order = int(sys.argv[2])
 temp_range = (.5, 20)
 nlce_type = sys.argv[1]
 granularity = 500
-solver = ExactDiag.specific_heat_solver
-property_type = "specific_heat"
+solver = ExactDiag.energy_solver
+property_type = "energy_heisenberg"
 data_dir = "./data"
 output_dir = "./output"
 temp_grid = np.linspace(temp_range[0], temp_range[1], num=granularity)
@@ -37,6 +37,8 @@ for order in range(1, final_order + 1):
         weight_dict_ordered[order][graph_id] = property_unweighted
         weight_dict[graph_id] = property_unweighted
 
+    print(f"Finishing Order {order} in Time {time.time() - start}")
+
 
 final_energy_grid_by_order = []
 final_energy_grid = np.zeros_like(temp_grid)
@@ -55,6 +57,7 @@ for order in range(6, len(final_energy_grid_by_order)):
 
 
 plt.legend()
+plt.xscale("log")
 
 plt.savefig(f"{output_dir}/{property_type}_{final_order}.pdf")
 print(f"Total Time: {time.time() - start: .4f}")
