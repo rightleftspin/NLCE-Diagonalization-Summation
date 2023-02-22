@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
-from itertools import product
 import numpy as np
 import scipy
-import json
-import multiprocessing as mp
-from functools import partial
-import pathlib
-from copy import deepcopy
 
 def hamiltonian(bond_solver, site_solver, state, num_sites, num_spin_states, bond_info):
     # Takes in a specific state and returns a list of tuples of the form

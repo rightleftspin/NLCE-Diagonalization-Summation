@@ -1,7 +1,18 @@
-def energy_solver(graph_id, order, graph_bond_dict, temperature_array):
+#!/usr/bin/env python3
+import numpy as np
+import scipy
+import json
+import multiprocessing as mp
+from functools import partial
+import pathlib
+
+import exact_diagonalization as ed
+from model_specific_functions import *
+
+def energy_solver(graph_id, model, order, graph_bond_dict, temperature_array):
     graph_property_info = {}
     bond_info = graph_bond_dict[graph_id]
-    energies = solve_energies(order, [], bond_info)
+    energies = ed.solve_for_property(model_info[model]["generator"], model_info[model]["bond_solver"], model_info[model]["site_solver"], order, [], bond_info)
 
     exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
     partition_function = exp_energy_temp_matrix.sum(axis=0)
@@ -13,10 +24,10 @@ def energy_solver(graph_id, order, graph_bond_dict, temperature_array):
 
     return(graph_property_info)
 
-def specific_heat_solver(graph_id, order, graph_bond_dict, temperature_array):
+def specific_heat_solver(graph_id, model, order, graph_bond_dict, temperature_array):
     graph_property_info = {}
     bond_info = graph_bond_dict[graph_id]
-    energies = solve_energies(order, [], bond_info)
+    energies = ed.solve_for_property(model_info[model]["generator"], model_info[model]["bond_solver"], model_info[model]["site_solver"], order, [], bond_info)
 
     exp_energy_temp_matrix = np.exp(-energies[:, np.newaxis] / temperature_array)
     partition_function = exp_energy_temp_matrix.sum(axis=0)
@@ -33,27 +44,33 @@ def specific_heat_solver(graph_id, order, graph_bond_dict, temperature_array):
     return(graph_property_info)
 
 
-def solve_property_for_order(property_function, property_name, data_dir, order, nlce_type, temperature_array):
+def solve_property_for_order(property_type, model_name, nlce_data_dir, property_data_dir, order, nlce_type, temperature_array):
+    graph_property_path = f"{property_data_dir}/graph_{model_name}_{property_type}_info_{nlce_type}_{order}.json"
+    graph_bond_info_path = f"{nlce_data_dir}/graph_bond_{nlce_type}_{order}.json"
 
-    graph_bond = open(f'{data_dir}/graph_bond_{nlce_type}_{order}.json')
-    graph_bond_dict = json.load(graph_bond)
+    if not pathlib.Path(graph_property_path).exists():
+        graph_bond = open(graph_bond_info_path)
+        graph_bond_dict = json.load(graph_bond)
 
-    if not pathlib.Path(f"{data_dir}/graph_{property_name}_info_{nlce_type}_{order}.json").exists():
-        property_solve_graph = partial(property_function, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
+        property_solver = partial(property_information[property_type], model = model_name, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
 
-        # Parallellize here
         cpus = mp.cpu_count()
+        print(f"Using {cpus} cpus")
         pool = mp.Pool(cpus)
-        graph_property_list = list(pool.map(property_solve_graph, graph_bond_dict.keys()))
-        graph_property_info = {}
+        graph_property_list = list(pool.map(property_solver, graph_bond_dict.keys()))
+        graph_property_info = {graph_id: graph_info for graph_dict in graph_property_list for graph_id, graph_info in graph_dict.items()}
 
-        for graph in graph_property_list:
-            graph_property_info.update(graph)
-
-        graph_property_info_json = open(f"{data_dir}/graph_{property_name}_info_{nlce_type}_{order}.json", "w")
+        graph_property_info_json = open(graph_property_path, "w")
         json.dump(graph_property_info, graph_property_info_json)
+
     else:
-        graph_property_info_json = open(f"{data_dir}/graph_{property_name}_info_{nlce_type}_{order}.json")
+        graph_property_info_json = open(graph_property_path)
         graph_property_info = json.load(graph_property_info_json)
 
     return(graph_property_info)
+
+property_information = {
+    "energy": energy_solver,
+    "specific_heat": specific_heat_solver
+}
+

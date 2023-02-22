@@ -1,4 +1,9 @@
+#!/usr/bin/env python3
+from itertools import product
 # It might be useful to put a dictionary here that has a key for each model and inside the key is all the associated functions that one needs to solve that model.
+
+def empty(site, state):
+    return([])
 
 def ising_kinetic(bond, state):
     # Simple kinetic term for the ising model, just uses the bond type to
@@ -47,3 +52,16 @@ def generate_states_ising_heisenberg(num_sites, num_particles_spin_sep):
     all_possible_states = list(product([True, False], repeat=num_sites))
 
     return(all_possible_states)
+
+model_info = {
+    "ising": {
+        "generator": generate_states_ising_heisenberg,
+        "bond_solver": ising_kinetic,
+        "site_solver": empty
+    },
+    "heisenberg": {
+        "generator": generate_states_ising_heisenberg,
+        "bond_solver": heisenberg_kinetic,
+        "site_solver": empty
+    }
+}
