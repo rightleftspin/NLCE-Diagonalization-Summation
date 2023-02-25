@@ -46,7 +46,7 @@ def specific_heat_solver(graph_id, model, order, graph_bond_dict, temperature_ar
 
 def solve_property_for_order(property_type, model_name, nlce_data_dir, property_data_dir, order, nlce_type, temperature_array):
     graph_property_path = f"{property_data_dir}/graph_{model_name}_{property_type}_info_{nlce_type}_{order}.json"
-    graph_bond_info_path = f"{nlce_data_dir}/graph_bond_{nlce_type}_{order}.json"
+    graph_bond_info_path = f"{nlce_data_dir}/{nlce_type}/graph_bond_{nlce_type}_{order}.json"
 
     if not pathlib.Path(graph_property_path).exists():
         graph_bond = open(graph_bond_info_path)

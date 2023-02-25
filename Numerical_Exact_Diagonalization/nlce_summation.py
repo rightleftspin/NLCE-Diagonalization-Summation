@@ -34,16 +34,17 @@ weight_dict = {}
 for order in range(1, final_order + 1):
     graph_property_info = ps.solve_property_for_order(property_type, model, nlce_data_dir, proper_property_data_dir, order, nlce_type, temp_grid)
 
-    subgraph_mult = open(f'{nlce_data_dir}/subgraph_mult_{nlce_type}_{order}.json')
+    subgraph_mult = open(f'{nlce_data_dir}/{nlce_type}/subgraph_mult_{nlce_type}_{order}.json')
     subgraph_mult_dict = json.load(subgraph_mult)
 
     weight_dict_ordered[order] = {}
 
     for graph_id in subgraph_mult_dict:
         property_unweighted = np.array(graph_property_info[graph_id])
-        for subgraph_id in subgraph_mult_dict[graph_id]:
+        if order > 1:
+            for subgraph_id in subgraph_mult_dict[graph_id]:
 
-            property_unweighted -= subgraph_mult_dict[graph_id][subgraph_id] * weight_dict[subgraph_id]
+                property_unweighted -= subgraph_mult_dict[graph_id][subgraph_id] * weight_dict[subgraph_id]
 
         weight_dict_ordered[order][graph_id] = property_unweighted
         weight_dict[graph_id] = property_unweighted
@@ -55,7 +56,7 @@ final_energy_grid_by_order = []
 final_energy_grid = np.zeros_like(temp_grid)
 
 for order in range(1, final_order + 1):
-    graph_mult = open(f'{nlce_data_dir}/graph_mult_{nlce_type}_{order}.json')
+    graph_mult = open(f'{nlce_data_dir}/{nlce_type}/graph_mult_{nlce_type}_{order}.json')
     graph_mult_dict = json.load(graph_mult)
     for graph_id in weight_dict_ordered[order]:
         final_energy_grid += graph_mult_dict[graph_id] * weight_dict[graph_id]
