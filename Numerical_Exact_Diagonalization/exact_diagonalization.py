@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
-import scipy
+import scipy.linalg as scl
 
 def hamiltonian(bond_solver, site_solver, state, num_sites, num_spin_states, bond_info):
     # Takes in a specific state and returns a list of tuples of the form
@@ -41,5 +41,5 @@ def generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spi
 def solve_for_property(state_generator, bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info):
     all_possible_states = state_generator(num_sites, num_particles_spin_sep)
     hamil_matrix = generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info, all_possible_states)
-    eigenvals = scipy.linalg.eigh(hamil_matrix, eigvals_only = True)
+    eigenvals = scl.eigh(hamil_matrix, eigvals_only = True)
     return(eigenvals)
