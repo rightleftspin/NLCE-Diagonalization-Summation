@@ -1,2 +1,2 @@
-# HubbardModel
-Hubbard Model Solver
+# Exact Diagonalization and NLCE Summation Solver for NLCE Clusters
+This repository is for code that solves for extensive properties of inifinite lattices based on the Numerical Linked Cluster Expansions (NLCEs) of those lattices. The input is data from the NLCE Cluster Generation algorithm, 3 json files per order and the output is a plot based on the solver provided in the model_specific_solvers.py file. 
