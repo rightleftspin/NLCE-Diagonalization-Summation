@@ -1,7 +1,5 @@
-NLCE_Triangles_Data/
-data/
-output/
-Old_Output/
+Data/
+Output/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
