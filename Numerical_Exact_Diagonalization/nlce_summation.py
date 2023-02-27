@@ -11,14 +11,14 @@ import exact_diagonalization as ed
 import property_solvers as ps
 from model_specific_functions import model_info
 
-def nlce_summation_main(temp_range, granularity, final_order, property_type, model, nlce_type, nlce_data_dir, proper_property_data_dir):
+def nlce_summation_main(temp_range, granularity, final_order, property_type, model, nlce_type, nlce_data_dir, proper_property_data_dir, benchmarking = False):
     temp_grid = np.linspace(temp_range[0], temp_range[1], num=granularity)
     weight_dict_ordered = {}
     weight_dict = {}
     
     for order in range(1, final_order + 1):
         start = time.time()
-        graph_property_info = ps.solve_property_for_order(property_type, model, nlce_data_dir, proper_property_data_dir, order, nlce_type, temp_grid)
+        graph_property_info = ps.solve_property_for_order(property_type, model, nlce_data_dir, proper_property_data_dir, order, nlce_type, temp_grid, benchmarking)
     
         subgraph_mult = open(f'{nlce_data_dir}/{nlce_type}/subgraph_mult_{nlce_type}_{order}.json')
         graph_mult = open(f'{nlce_data_dir}/{nlce_type}/graph_mult_{nlce_type}_{order}.json')
@@ -37,7 +37,8 @@ def nlce_summation_main(temp_range, granularity, final_order, property_type, mod
     
             weight_dict_ordered[order][graph_id] = graph_mult_dict[graph_id] * property_unweighted
             weight_dict[graph_id] = property_unweighted
-        print(f"Finishing order {order} in {time.time() - start:5f} sec")
+        if benchmarking:
+            print(f"Finishing order {order} in {time.time() - start:5f} sec")
     
     return(weight_dict_ordered, temp_grid)
 
@@ -69,7 +70,7 @@ def generate_plot_by_order(property_type, model, output_dir, property_data_by_or
     plt.close()
     return()
 
-def plot_for_property(nlce_info, plotting_info, save_info):
+def plot_for_property(nlce_info, plotting_info, save_info, benchmarking=False):
     nlce_type, final_order, model, property_type = nlce_info
     granularity, starting_order_plot, temp_range = plotting_info
     nlce_data_dir, property_data_dir = save_info
@@ -79,13 +80,15 @@ def plot_for_property(nlce_info, plotting_info, save_info):
         raise ValueError("Not a valid Model or Property Type")
 
     proper_property_data_dir = f"{property_data_dir}/{nlce_type}/{model}/{property_type}/{int(temp_range[0]*10)}_{int(temp_range[1]*10)}/"
-    os.makedirs(proper_property_data_dir, exist_ok=True)
+    if not benchmarking:
+        os.makedirs(proper_property_data_dir, exist_ok=True)
 
-    prop_by_order_dict, temp_grid = nlce_summation_main(temp_range, granularity, final_order, property_type, model, nlce_type, nlce_data_dir, proper_property_data_dir)
+    prop_by_order_dict, temp_grid = nlce_summation_main(temp_range, granularity, final_order, property_type, model, nlce_type, nlce_data_dir, proper_property_data_dir, benchmarking)
 
     prop_by_order_list = sum_by_order_ascending(prop_by_order_dict, temp_grid)
 
-    generate_plot_by_order(property_type, model, proper_property_data_dir, prop_by_order_list, temp_grid, starting_order_plot)
+    if not benchmarking:
+        generate_plot_by_order(property_type, model, proper_property_data_dir, prop_by_order_list, temp_grid, starting_order_plot)
 
     return(proper_property_data_dir)
 
@@ -100,6 +103,13 @@ if __name__ == "__main__":
     nlce_info = list(map(dict_map_func, ["nlce_type", "final_order", "model", "property_type"]))
     plotting_info = list(map(dict_map_func, ["granularity", "starting_order_plot", "temp_range"]))
     save_info = list(map(dict_map_func, ["nlce_data_dir", "output_dir"]))
+    benchmarking = dict_map_func("benchmarking")
     
-    final_output_dir = plot_for_property(nlce_info, plotting_info, save_info)
+    if benchmarking:
+        start = time.time()
+
+    final_output_dir = plot_for_property(nlce_info, plotting_info, save_info, benchmarking)
+    
     print(f"Output in {final_output_dir}")
+    if benchmarking:
+        print(f"Solved in {time.time() - start:.4f} sec")

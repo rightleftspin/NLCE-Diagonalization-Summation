@@ -44,24 +44,26 @@ def specific_heat_solver(graph_id, model, order, graph_bond_dict, temperature_ar
     return(graph_property_info)
 
 
-def solve_property_for_order(property_type, model_name, nlce_data_dir, property_data_dir, order, nlce_type, temperature_array):
+def solve_property_for_order(property_type, model_name, nlce_data_dir, property_data_dir, order, nlce_type, temperature_array, benchmarking = False):
     graph_property_path = f"{property_data_dir}/graph_{model_name}_{property_type}_info_{nlce_type}_{order}.json"
     graph_bond_info_path = f"{nlce_data_dir}/{nlce_type}/graph_bond_{nlce_type}_{order}.json"
 
-    if not pathlib.Path(graph_property_path).exists():
+    if (not pathlib.Path(graph_property_path).exists()) or benchmarking:
         graph_bond = open(graph_bond_info_path)
         graph_bond_dict = json.load(graph_bond)
 
         property_solver = partial(property_information[property_type], model = model_name, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
 
         cpus = mp.cpu_count()
-        print(f"Using {cpus} cpus")
+        if benchmarking:
+            print(f"Using {cpus} cpus")
         pool = mp.Pool(cpus)
         graph_property_list = list(pool.map(property_solver, graph_bond_dict.keys()))
         graph_property_info = {graph_id: graph_info for graph_dict in graph_property_list for graph_id, graph_info in graph_dict.items()}
 
-        graph_property_info_json = open(graph_property_path, "w")
-        json.dump(graph_property_info, graph_property_info_json)
+        if not benchmarking:
+            graph_property_info_json = open(graph_property_path, "w")
+            json.dump(graph_property_info, graph_property_info_json)
 
     else:
         graph_property_info_json = open(graph_property_path)
