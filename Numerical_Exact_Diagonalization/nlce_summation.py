@@ -69,16 +69,15 @@ def generate_plot_by_order(property_type, model, output_dir, property_data_by_or
     plt.close()
     return()
 
-def plot_for_property(input_array, temp_range):
-    nlce_type, final_order, model, property_type = input_array
+def plot_for_property(nlce_info, plotting_info, save_info):
+    nlce_type, final_order, model, property_type = nlce_info
+    granularity, starting_order_plot, temp_range = plotting_info
+    nlce_data_dir, property_data_dir = save_info
+
     final_order = int(final_order)
     if (model not in model_info) or (property_type not in ps.property_information):
         raise ValueError("Not a valid Model or Property Type")
 
-    granularity = 500
-    starting_order_plot = 6
-    nlce_data_dir = "./Data/NLCE_Data"
-    property_data_dir = "./Data/Property_Data"
     proper_property_data_dir = f"{property_data_dir}/{nlce_type}/{model}/{property_type}/{int(temp_range[0]*10)}_{int(temp_range[1]*10)}/"
     os.makedirs(proper_property_data_dir, exist_ok=True)
 
@@ -88,7 +87,19 @@ def plot_for_property(input_array, temp_range):
 
     generate_plot_by_order(property_type, model, proper_property_data_dir, prop_by_order_list, temp_grid, starting_order_plot)
 
-    return()
+    return(proper_property_data_dir)
 
 
-plot_for_property(sys.argv[1:5], (.5, 20))
+if __name__ == "__main__":
+    print("Attempting NLCE Diagonalization")
+    property_input_json = open(sys.argv[1])
+    property_input_dict = json.load(property_input_json)
+    
+    dict_map_func = lambda key: property_input_dict[key]
+    
+    nlce_info = list(map(dict_map_func, ["nlce_type", "final_order", "model", "property_type"]))
+    plotting_info = list(map(dict_map_func, ["granularity", "starting_order_plot", "temp_range"]))
+    save_info = list(map(dict_map_func, ["nlce_data_dir", "output_dir"]))
+    
+    final_output_dir = plot_for_property(nlce_info, plotting_info, save_info)
+    print(f"Output in {final_output_dir}")
