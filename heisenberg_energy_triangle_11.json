@@ -1,0 +1,12 @@
+{
+	"nlce_type": "triangle",
+	"final_order": 11,
+	"model": "heisenberg",
+	"property_type": "energy",
+	"temp_range": [0.5, 20],
+	"granularity": 500,
+	"starting_order_plot": 6,
+	"nlce_data_dir": "./Data/NLCE_Data",
+	"output_dir": "./Data/Property_Data",
+	"benchmarking": false
+}

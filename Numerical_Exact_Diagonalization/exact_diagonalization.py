@@ -37,7 +37,8 @@ def generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spi
 
                 
     return(hamil_matrix)
-
+    
+@profile
 def solve_for_property(state_generator, bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info):
     all_possible_states = state_generator(num_sites, num_particles_spin_sep)
     hamil_matrix = generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info, all_possible_states)

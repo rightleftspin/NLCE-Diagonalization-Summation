@@ -28,6 +28,7 @@
           matplotlib
           pynauty
           scipy
+	  line_profiler
         '';
       });
     };

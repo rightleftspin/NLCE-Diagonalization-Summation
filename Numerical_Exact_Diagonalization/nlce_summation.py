@@ -11,6 +11,7 @@ import exact_diagonalization as ed
 import property_solvers as ps
 from model_specific_functions import model_info
 
+@profile
 def nlce_summation_main(temp_range, granularity, final_order, property_type, model, nlce_type, nlce_data_dir, proper_property_data_dir, benchmarking = False):
     temp_grid = np.linspace(temp_range[0], temp_range[1], num=granularity)
     weight_dict_ordered = {}
@@ -25,6 +26,7 @@ def nlce_summation_main(temp_range, granularity, final_order, property_type, mod
     
         subgraph_mult_dict = json.load(subgraph_mult)
         graph_mult_dict = json.load(graph_mult)
+        print(f"Order {order} has {len(graph_mult_dict)} graphs")
     
         weight_dict_ordered[order] = {}
     
@@ -55,14 +57,14 @@ def sum_by_order_ascending(ordered_property_dict, temp_grid):
 
     return(final_property_grid_by_order)
 
-def generate_plot_by_order(property_type, model, output_dir, property_data_by_order, temp_data, starting_order):
+def generate_plot_by_order(nlce_type, property_type, model, output_dir, property_data_by_order, temp_data, starting_order):
     final_order = len(property_data_by_order)
     for order in range(starting_order, final_order):
         plt.plot(temp_data, property_data_by_order[order], label = f"{order + 1}")
     
     plt.xlabel("log(Temperature)")
     plt.ylabel(f"{property_type.capitalize()}")
-    plt.title(f"{model.capitalize()} {property_type.capitalize()} vs log(Temperature) NLCE Order {final_order}")
+    plt.title(f"{model.capitalize()} {property_type.capitalize()} vs log(Temperature) NLCE Order {final_order} {nlce_type}")
     plt.legend()
     plt.xscale("log")
     
@@ -88,7 +90,7 @@ def plot_for_property(nlce_info, plotting_info, save_info, benchmarking=False):
     prop_by_order_list = sum_by_order_ascending(prop_by_order_dict, temp_grid)
 
     if not benchmarking:
-        generate_plot_by_order(property_type, model, proper_property_data_dir, prop_by_order_list, temp_grid, starting_order_plot)
+        generate_plot_by_order(nlce_type, property_type, model, proper_property_data_dir, prop_by_order_list, temp_grid, starting_order_plot)
 
     return(proper_property_data_dir)
 

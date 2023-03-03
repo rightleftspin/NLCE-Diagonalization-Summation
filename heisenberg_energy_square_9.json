@@ -8,5 +8,5 @@
 	"starting_order_plot": 6,
 	"nlce_data_dir": "./Data/NLCE_Data",
 	"output_dir": "./Data/Property_Data",
-	"benchmarking": false
+	"benchmarking": true
 }
