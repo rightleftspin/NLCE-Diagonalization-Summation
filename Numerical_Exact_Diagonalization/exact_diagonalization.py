@@ -46,6 +46,7 @@ def solve_for_property(state_generator, bond_solver, site_solver, num_sites, num
     hamil_matrix = generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info, all_possible_states)
 #    hmat = time.time()
     eigenvals = scl.eigh(hamil_matrix, eigvals_only = True)
+#    print(eigenvals)
 #    end = time.time()
 
 #    print(f"Generated Matrix in {hmat - start}")

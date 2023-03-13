@@ -3,6 +3,7 @@ import sys, time, json
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spl
+import scipy.linalg as sl
 
 def get_bit(value, n):
     return ((value >> n & 1) != 0)
@@ -13,18 +14,18 @@ def set_bit(value, n):
 def clear_bit(value, n):
     return value & ~(1 << n)
 
-def load_graph_bond_info(graph_bond_info_file_path):
+def load_cluster_bond_info(cluster_bond_info_file_path):
     """
     Read and initialize the graph bond information json file
     """
     # Load the graph bond information into a dictionary
-    graph_bond_info_file = open(graph_bond_info_file_path) 
-    graph_bond_info = json.load(graph_bond_info_file)
+    cluster_bond_info_file = open(cluster_bond_info_file_path)
+    cluster_bond_info = json.load(cluster_bond_info_file)
 
-    return(graph_bond_info)
+    return(cluster_bond_info)
 
 @dask.delayed
-def find_heisenberg_energy_eigenvalues(bond_information, number_sites, tunneling_strength):
+def find_heisenberg_energy_eigenvalues(bond_information, number_sites, tunneling_strength, sparse):
     """
     This function takes the bond information for a specific graph
     and returns its heisenberg hamiltonian matrix in sparse DOK form.
@@ -62,39 +63,99 @@ def find_heisenberg_energy_eigenvalues(bond_information, number_sites, tunneling
     hamiltonian_matrix = sp.csr_matrix((data, (rows, columns)), (number_states, number_states))
 
     # Solve for the eigenvalues of the hamiltonian matrix
-    eigenvalues = spl.eigsh(hamiltonian_matrix, return_eigenvectors=False)
+    if sparse:
+        eigenvalues = spl.eigsh(hamiltonian_matrix, return_eigenvectors=False)
+    else:
+        eigenvalues = sl.eigvalsh(hamiltonian_matrix.toarray())
 
     return(eigenvalues)
 
-def main(order, graph_bond_info_file_path, model, tunneling_strength):
+@dask.delayed
+def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_strength, sparse):
     """
-    Main function: Takes in order, model information and file path for the graph bond
-    information, then it calculates the eigenvalues and returns them to you as an
-    uncomputed dictionary
+    This function takes the bond information for a specific graph
+    and returns its ising eigenvalues
     """
-    # Load the graph bond info dictionary
-    graph_bond_info = load_graph_bond_info(graph_bond_info_file_path)
+    number_states = 2 ** number_sites
+    eigenvalues = []
+
+    for state in range(number_states):
+        e_state = 0
+        for bond in bond_information:
+            if get_bit(state, bond[0]) == get_bit(state, bond[1]):
+                e_state -= .25
+            else:
+                e_state += .25
+        eigenvalues.append(e_state)
+
+    return(np.array(eigenvalues))
+
+def write_eigenvalues(eigenvalue_dictionary, order, model, tunneling_strength, base_path):
+    """
+    This function writes the eigenvalues of a specific model and property
+    to the corresponding json file and creates the directory if needed
+    """
+    # Declare write path
+    write_dir = f"{base_path}/{model}"
+    write_path = f"{write_dir}/{order}_{''.join([str(j) for j in tunneling_strength])}.json"
+    # Create directory if it doesn't exist already
+    os.makedirs(write_dir, exist_ok = True)
+    # open eigenvalue write file
+    eigenvalue_write_file = open(write_path)
+    json.dump(eigenvalue_dictionary, eigenvalue_write_file)
+    eigenvalue_write_file.close()
+
+    return(write_path)
+
+def ed_main(order, cluster_bond_info, model, tunneling_strength):
+    """
+    Main function (for external use): Takes in order, model information and
+    file path for the graph bond information, then it calculates the
+    eigenvalues and returns them to you as an uncomputed dictionary
+    """
+    sparse = order > 2
     # Load the appropriate graph solver function, preferably
     # utilizing the dask.delayed framework
     solver_function = model_property_functions[model]
 
     # Load graph eigenvalues in using the solver function
-    graph_eigenvalues = {}
-    for graph in graph_bond_info:
-        graph_eigenvalues[graph] = solver_function(graph_bond_info[graph], order, tunneling_strength)
+    cluster_eigenvalues = {}
+    for cluster_id in cluster_bond_info:
+        cluster_eigenvalues[cluster_id] = solver_function(cluster_bond_info[cluster_id], order, tunneling_strength, sparse)
 
-    return(graph_eigenvalues)
+    return(cluster_eigenvalues)
+
+def main(order, cluster_bond_info_file_path, model, tunneling_strength):
+    """
+    Main function: Takes in order, model information and file path for the graph bond
+    information, then it calculates the eigenvalues and returns them to you as an
+    uncomputed dictionary
+    """
+    sparse = order > 2
+    # Load the graph bond info dictionary
+    cluster_bond_info = load_cluster_bond_info(cluster_bond_info_file_path)
+    # Load the appropriate graph solver function, preferably
+    # utilizing the dask.delayed framework
+    solver_function = model_property_functions[model]
+
+    # Load graph eigenvalues in using the solver function
+    cluster_eigenvalues = {}
+    for cluster_id in cluster_bond_info:
+        cluster_eigenvalues[cluster_id] = solver_function(cluster_bond_info[cluster_id], order, tunneling_strength, sparse)
+
+    return(cluster_eigenvalues)
 
 model_property_functions = {
-        "heisenberg_energy": find_heisenberg_energy_eigenvalues
+        "heisenberg_energy": find_heisenberg_energy_eigenvalues,
+        "ising_energy": find_ising_energy_eigenvalues
         }
 
 if __name__ == "__main__":
     order = eval(sys.argv[1])
     data_directory = sys.argv[2]
     nlce_type = sys.argv[3]
-    graph_eigenvalues = main(order, f"{data_directory}/{nlce_type}/graph_bond_{nlce_type}_{order}.json", "heisenberg_energy", [1])
+    cluster_eigenvalues = main(order, f"{data_directory}/{nlce_type}/graph_bond_{nlce_type}_{order}.json", "heisenberg_energy", [1, 0.5])
 
     start = time.time()
-    graph_eigenvalues_solved = dask.compute(graph_eigenvalues, scheduler = "processes", num_workers=8, threads_per_worker=1)
+    cluster_eigenvalues_solved = dask.compute(cluster_eigenvalues, scheduler = "processes", num_workers=8, threads_per_worker=1)
     print(f"Elapsed Time: {time.time() - start}")

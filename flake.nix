@@ -32,7 +32,7 @@
 	  numba
           dask
 	  dask[distributed]
-	  bokeh
+	  ipycytoscape
         '';
       });
     };
