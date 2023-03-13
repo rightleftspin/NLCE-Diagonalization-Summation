@@ -1,6 +1,6 @@
 {
 	"nlce_type": "square",
-	"final_order": 8,
+	"final_order": 9,
 	"model": "heisenberg",
 	"property_type": "energy",
 	"temp_range": [0.5, 20],

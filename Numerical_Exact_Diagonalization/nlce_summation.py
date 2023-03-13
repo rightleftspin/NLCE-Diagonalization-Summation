@@ -11,7 +11,6 @@ import exact_diagonalization as ed
 import property_solvers as ps
 from model_specific_functions import model_info
 
-@profile
 def nlce_summation_main(temp_range, granularity, final_order, property_type, model, nlce_type, nlce_data_dir, proper_property_data_dir, benchmarking = False):
     temp_grid = np.linspace(temp_range[0], temp_range[1], num=granularity)
     weight_dict_ordered = {}

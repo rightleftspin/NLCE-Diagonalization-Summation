@@ -21,13 +21,13 @@ def heisenberg_kinetic(bond, state):
     final_state = []
     j = -1
     if (state[bond[0]] == state[bond[1]]):
-        final_state.append((j * (1 / bond[2]), hash(state)))
+        final_state.append(((j * (1 / bond[2]) * .25), hash(state)))
     else: 
-        final_state.append((-j * (1 / bond[2]), hash(state)))
+        final_state.append(((-j * (1 / bond[2]) * .25), hash(state)))
         new_state = list(state)
         new_state[bond[0]] = not state[bond[0]]
         new_state[bond[1]] = not state[bond[1]]
-        final_state.append((-j * 0.5 * (1 / bond[2]), hash(tuple(new_state))))
+        final_state.append((j * 0.5 * (1 / bond[2]), hash(tuple(new_state))))
 
     return(final_state)
 

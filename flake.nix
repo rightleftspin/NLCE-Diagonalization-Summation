@@ -29,6 +29,10 @@
           pynauty
           scipy
 	  line_profiler
+	  numba
+          dask
+	  dask[distributed]
+	  bokeh
         '';
       });
     };
