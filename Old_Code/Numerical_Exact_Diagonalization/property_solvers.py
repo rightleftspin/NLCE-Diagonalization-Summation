@@ -54,7 +54,8 @@ def solve_property_for_order(property_type, model_name, nlce_data_dir, property_
 
         property_solver = partial(property_information[property_type], model = model_name, order = order, graph_bond_dict = graph_bond_dict, temperature_array = temperature_array)
 
-        cpus = mp.cpu_count()
+        #cpus = mp.cpu_count()
+        cpus = 8
         if benchmarking:
             print(f"Using {cpus} cpus")
         pool = mp.Pool(cpus)

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import numpy as np
 import scipy.linalg as scl
+from numba import njit
+import time
 
 def hamiltonian(bond_solver, site_solver, state, num_sites, num_spin_states, bond_info):
     # Takes in a specific state and returns a list of tuples of the form
@@ -38,9 +40,15 @@ def generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spi
                 
     return(hamil_matrix)
     
-@profile
 def solve_for_property(state_generator, bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info):
     all_possible_states = state_generator(num_sites, num_particles_spin_sep)
+#    start = time.time()
     hamil_matrix = generate_hamil_matrix(bond_solver, site_solver, num_sites, num_particles_spin_sep, bond_info, all_possible_states)
+#    hmat = time.time()
     eigenvals = scl.eigh(hamil_matrix, eigvals_only = True)
+#    print(eigenvals)
+#    end = time.time()
+
+#    print(f"Generated Matrix in {hmat - start}")
+#    print(f"Diagonalized in {end - hmat}")
     return(eigenvals)

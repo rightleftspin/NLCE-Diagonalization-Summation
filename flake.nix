@@ -29,6 +29,11 @@
           pynauty
           scipy
 	  line_profiler
+	  numba
+          dask
+	  dask[distributed]
+	  ipycytoscape
+	  pandas
         '';
       });
     };

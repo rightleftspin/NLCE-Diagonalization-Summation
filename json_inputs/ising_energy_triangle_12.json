@@ -1,0 +1,14 @@
+{
+	"geometry": "triangle",
+	"final_order": 12,
+	"tunneling_strength": [1, 0.5],
+	"property": "ising_energy_related",
+	"temp_range": [0.5, 20],
+	"grid_granularity": 50,
+	"starting_order_plot": 8,
+	"nlce_data_dir": "./Data/NLCE_Data",
+	"fig_output_dir": "./figs_out",
+	"output_dir": "./Data/Property_Data",
+	"number_cores": 8,
+	"benchmarking": true
+}
