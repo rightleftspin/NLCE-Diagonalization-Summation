@@ -6,6 +6,7 @@ import copy
 import time
 import sys
 import os
+import pandas as pd
 
 import exact_diagonalization as ed
 import property_solvers as ps
@@ -61,6 +62,10 @@ def generate_plot_by_order(nlce_type, property_type, model, output_dir, property
     for order in range(starting_order, final_order):
         plt.plot(temp_data, property_data_by_order[order], label = f"{order + 1}")
     
+    mcdata_ising = pd.read_csv("./mcdata_ising.csv")
+    temp_mc, e_mc = mcdata_ising['T'], mcdata_ising['E']/2500
+    plt.plot(temp_mc, e_mc, 'k.',label = "MC Data")
+
     plt.xlabel("log(Temperature)")
     plt.ylabel(f"{property_type.capitalize()}")
     plt.title(f"{model.capitalize()} {property_type.capitalize()} vs log(Temperature) NLCE Order {final_order} {nlce_type}")

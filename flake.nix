@@ -33,6 +33,7 @@
           dask
 	  dask[distributed]
 	  ipycytoscape
+	  pandas
         '';
       });
     };

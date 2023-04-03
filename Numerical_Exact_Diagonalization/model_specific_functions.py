@@ -11,9 +11,9 @@ def ising_kinetic(bond, state):
     final_state = []
     j = -1
     if (state[bond[0]] == state[bond[1]]):
-        final_state.append((.25 * j * (1 / bond[2]), hash(state)))
+        final_state.append((j * (1 / bond[2]), hash(state)))
     else:
-        final_state.append((-.25 * j * (1 / bond[2]), hash(state)))
+        final_state.append((-j * (1 / bond[2]), hash(state)))
     
     return(final_state)
 

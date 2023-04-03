@@ -1,144 +1,132 @@
-import dask
-import sys, json
+import json, sys, time
 import numpy as np
+import pandas as pd
 import exact_diagonalization as ed
 import matplotlib.pyplot as plt
 
-def energy_solver(cluster_eigenvalues, temperature_array):
+def sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered):
     """
-    This function takes in the cluster eigenvalues and transforms
-    it into an energy array fit to be plotted with the input
-    temperature array
+    This function takes in the dictionary (not seperated by order)
+    of the property of every graph and returns nlce sums seperated by 
+    order of the property as a function of temperature
+
+    input_dict: {inputs from the json file}
+    property_dict: {graph_id: [unweighted_property_numpy_array]}
+    subgraph_mult_dicts: {order: {graph_id: {subgraph_id: multiplicity}}}
+                    print(property_dict[subgraph_id])
+    graph_mult_dicts: {order: {graph_id: multiplicity}}
+
+    return: {order: [property along temperature grid]}
     """
-    exp_energy_temp_matrix = np.exp(-cluster_eigenvalues[:, np.newaxis] / temperature_array)
-    partition_function = exp_energy_temp_matrix.sum(axis=0)
-    energy = np.matmul(cluster_eigenvalues, exp_energy_temp_matrix)
+    benchmarking = input_dict["benchmarking"]
+    # initialize total_property with all zeros
+    total_property = np.zeros(input_dict["grid_granularity"])
+    weighted_property_dict = {}
+    # Loop over every order's graph multiplicity
+    for order, graph_mult_dict in graph_mult_ordered.items():
+        # Loop over every graph per order
+        if benchmarking:
+            print(f"Starting NLCE Sum for order {order} with {len(graph_mult_dict)} graphs")
+            start = time.time()
+        for graph_id, graph_mult in graph_mult_dict.items():
+            # find the initial weight for the graph
+            graph_weight = property_dict[graph_id]
+            if order > 1:
+                # Loop over all the subgraphs of the graph
+                subgraph_mult_dict = subgraph_mult_ordered[order]
+                for subgraph_id, subgraph_mult in subgraph_mult_dict[graph_id].items():
+                    # And subtract their weights (according to the subgraph multiplicity)
+                    graph_weight -= subgraph_mult * property_dict[subgraph_id]
 
-    final_energies = energy / partition_function
+            # update the total property with the property of the given graph
+            total_property += graph_mult * graph_weight
+        if benchmarking:
+            print(f"Finishing NLCE Sum for order {order} in {time.time() - start :.4f}s")
+        # update the weighted property dictionary for this order
+        weighted_property_dict[order] = np.copy(total_property)
 
-    return(final_energies)
+    return(weighted_property_dict)
 
-def find_cluster_total_property(cluster_id, cluster_property, subcluster_multiplicity, all_cluster_properties):
+def load_dict(input_dict):
     """
-    Finds the total nlce property of a cluster if all its underlying subclusters are taken
-    into consideration through the subcluster_multiplicity
+    Loads the graph bond info, graph multiplicity and subgraph multplicity
+    based on the input_dict
     """
-    for subcluster_id, multiplicity in subcluster_multiplicity.items():
-        cluster_property -= multiplicity * all_cluster_properties[subcluster_id]
+    benchmarking = input_dict["benchmarking"]
+    nlce_data_dir = input_dict["nlce_data_dir"]
+    geometry = input_dict["geometry"]
+    graph_dict_types = (f"graph_bond_{geometry}", f"graph_mult_{geometry}", f"subgraph_mult_{geometry}")
+    
+    graph_dicts = [{}, {}, {}]
+    for order in range(1, input_dict["final_order"] + 1):
+        if benchmarking:
+            start = time.time()
+            print(f"Loading order {order} from json files")
+        
+        for ind, graph_dict_type in enumerate(graph_dict_types):
 
-    return(cluster_property)
+            graph_file = open(f'{nlce_data_dir}/{geometry}/{graph_dict_type}_{order}.json')
+            graph_dict = json.load(graph_file)
 
-def find_properties_for_order(order, cluster_bond_info, model, tunneling_strength, temperature_array):
-    """
-    Finds the property evaluated at each cluster for the given model
-    """
-    all_cluster_eigenvalues_initial = ed.ed_main(order, cluster_bond_info, model, tunneling_strength)
-    all_cluster_eigenvalues = dask.compute(all_cluster_eigenvalues_initial, scheduler = "processes")[0]
-    property_solver = property_solvers[model]
+            graph_dicts[ind][order] = graph_dict
+        
+        if benchmarking:
+            print(f"Finished loading order {order} in {time.time() - start:.4f}s")
 
-    cluster_properties = {}
+    return(graph_dicts)
 
-    for cluster_id, cluster_eigenvalues in all_cluster_eigenvalues.items():
-        cluster_properties[cluster_id] = property_solver(cluster_eigenvalues, temperature_array)
+def plot_property(input_dict, weight_dict, temp_grid, property_name):
+    benchmarking = input_dict["benchmarking"]
+    starting_order_plot = input_dict["starting_order_plot"]
+    final_order = input_dict["final_order"]
+    tunneling_strength = input_dict["tunneling_strength"]
+    save_path = f"{input_dict['fig_output_dir']}/{input_dict['property']}_{property_name}_{input_dict['geometry']}_{final_order}.pdf"
 
-    return(cluster_properties)
+    if benchmarking:
+        print(f"Plotting {property_name}")
 
-def update_properties_with_subclusters(cluster_properties, all_cluster_properties, subcluster_multiplicity):
-    """
-    Takes a dictionary of clusters and updates the cluster property for the total NLCE
-    sum with the subclusters considered
-    """
-    cluster_properties_updated = {}
-    for cluster_id, cluster_property in cluster_properties.items():
-        cluster_properties_updated[cluster_id] = find_cluster_total_property(cluster_id, cluster_property, subcluster_multiplicity[cluster_id], all_cluster_properties)
+    plt.figure()
+    for order in range(starting_order_plot, final_order + 1):
+        
+        plot_prop = weight_dict[order]
+        plt.plot(temp_grid, plot_prop, label = f"{order}")
 
-    return(cluster_properties_updated)
+        plt.xlabel("log(Temperature)") 
+        plt.ylabel(f"{property_name}")
+        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength}") 
+        plt.xscale('log')
 
-def sum_all_orders(clusters_by_order, all_cluster_properties, cluster_mult_all_orders):
-    """
-    Takes cluster_ids seperated by order and returns an array seperated
-    by order, with each order considering the last in the calculation
-    """
-    seperated_by_order = []
-    running_cluster_property = np.zeros_like(list(all_cluster_properties.values())[0])
-    for order, cluster_ids in clusters_by_order.items():
-        for cluster_id in cluster_ids:
-            running_cluster_property += cluster_mult_all_orders[order][cluster_id] * all_cluster_properties[cluster_id]
+#    mcdata_ising = pd.read_csv("./mcdata_ising.csv")
+#    temp_mc, e_mc = mcdata_ising['T'], mcdata_ising['E']/2500
+#    plt.plot(temp_mc, e_mc, 'k.',label = "MC Data")
 
-        seperated_by_order.append(running_cluster_property.copy())
-
-    return(seperated_by_order)
-
-def load_json_all_orders(nlce_data_dir, final_order, nlce_type):
-    """
-    Takes in the data directory and final order and loads all the
-    dictionaries of each input file into their corresponding spots
-    """
-    subgraph_mult_all_orders, graph_mult_all_orders, graph_bond_all_orders = {}, {}, {}
-
-    clusters_by_order = {}
-
-    for order in range(1, final_order + 1):
-        subgraph_mult_file = open(f'{nlce_data_dir}/{nlce_type}/subgraph_mult_{nlce_type}_{order}.json')
-        graph_mult_file = open(f'{nlce_data_dir}/{nlce_type}/graph_mult_{nlce_type}_{order}.json')
-        graph_bond_file = open(f'{nlce_data_dir}/{nlce_type}/graph_bond_{nlce_type}_{order}.json')
-
-        graph_mult = json.load(graph_mult_file)
-        graph_mult_all_orders[order] = graph_mult
-        subgraph_mult_all_orders[order] = json.load(subgraph_mult_file)
-        graph_bond_all_orders[order] = json.load(graph_bond_file)
-
-        clusters_by_order[order] = list(graph_mult.keys())
-
-    return(graph_mult_all_orders, subgraph_mult_all_orders, graph_bond_all_orders, clusters_by_order)
-
-def main(final_order, nlce_data_dir, output_dir, nlce_type, model, tunneling_strength, temperature_array):
-    """
-    Main function runs the whole NLCE sum for all orders
-    """
-
-    # Load all json data
-    graph_mult_all_orders, subgraph_mult_all_orders, graph_bond_all_orders, clusters_by_order = load_json_all_orders(nlce_data_dir, final_order, nlce_type)
-
-    cluster_properties_by_order = {}
-    all_cluster_properties = {}
-    # Find all the initial properties for each order
-    for order, cluster_bond_info in graph_bond_all_orders.items():
-        cluster_properties = find_properties_for_order(order, cluster_bond_info, model, tunneling_strength, temperature_array)
-        if order > 1:
-            updated_properties = update_properties_with_subclusters(cluster_properties, all_cluster_properties, subgraph_mult_all_orders[order])
-            cluster_properties_by_order[order] = updated_properties
-            all_cluster_properties.update(updated_properties)
-        else:
-            cluster_properties_by_order[order] = cluster_properties
-            all_cluster_properties.update(cluster_properties)
-
-
-    property_sep_by_order = sum_all_orders(cluster_properties_by_order, all_cluster_properties, graph_mult_all_orders)
-
-
-    for order in range(6, final_order):
-        plt.plot(temperature_array, property_sep_by_order[order], label = f"{order + 1}")
-
-    plt.xlabel("Log(Temperature)")
-    plt.ylabel(f"{model.replace('_', ' ').capitalize()}")
-    plt.title(f"{model.replace('_', ' ')} vs Log(Temperature) NLCE Order {final_order} {nlce_type}")
+    if property_name == "Specific Heat":
+        plt.ylim([0, 3])
     plt.legend()
-    plt.xscale("log")
+    plt.savefig(save_path)
 
-    plt.savefig(f"{output_dir}/{model}_{final_order}.pdf")
-    plt.close()
+    if benchmarking:
+        print(f"Finished Plotting {property_name}")
 
-    return()
+    return(save_path)
 
-property_solvers = { "heisenberg_energy": energy_solver, "ising_energy": energy_solver }
+def main(input_dict):
+
+    graph_bond_info_ordered, graph_mult_ordered, subgraph_mult_ordered = load_dict(input_dict)
+    
+    property_dict_all, temp_grid = ed.property_functions[input_dict["property"]](input_dict, graph_bond_info_ordered)
+
+    output_dirs = []
+    for prop_name, property_dict in property_dict_all.items():
+        output_dirs.append(plot_property(input_dict, 
+                                         sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered),
+                                         temp_grid, 
+                                         prop_name))
+
+    return(output_dirs)
 
 if __name__ == "__main__":
-    final_order = eval(sys.argv[1])
-    nlce_data_dir = sys.argv[2]
-    nlce_type = sys.argv[3]
-    model = sys.argv[4]
-    tunneling_strength = [1]
-    temperature_array = np.linspace(.1, 20, 500)
-    output_dir = "./Data/Plots"
-    main(final_order, nlce_data_dir, output_dir, nlce_type, model, tunneling_strength, temperature_array)
+    input_dict = json.load(open(sys.argv[1]))
+    output_dirs = main(input_dict)
+    for output in output_dirs:
+        print(f"Output File Saved in {output}")

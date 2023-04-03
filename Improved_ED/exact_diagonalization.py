@@ -1,9 +1,11 @@
 import dask
-import sys, time, json
+import time
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spl
 import scipy.linalg as sl
+from tqdm import tqdm
+from dask.diagnostics import ProgressBar
 
 def get_bit(value, n):
     return ((value >> n & 1) != 0)
@@ -14,148 +16,85 @@ def set_bit(value, n):
 def clear_bit(value, n):
     return value & ~(1 << n)
 
-def load_cluster_bond_info(cluster_bond_info_file_path):
+def eig_to_property_general(property_array, energy_array, temp_grid, number_sites):
     """
-    Read and initialize the graph bond information json file
+    General purpose summation for a general property
     """
-    # Load the graph bond information into a dictionary
-    cluster_bond_info_file = open(cluster_bond_info_file_path)
-    cluster_bond_info = json.load(cluster_bond_info_file)
+    
+    exp_energy_temp_matrix = np.exp(-energy_array[:, np.newaxis] / temp_grid)
+    partition_function = exp_energy_temp_matrix.sum(axis=0)
+    prop_sum = np.matmul(property_array, exp_energy_temp_matrix)
 
-    return(cluster_bond_info)
+    final_prop = prop_sum / partition_function
+
+    return(final_prop)
 
 @dask.delayed
-def find_heisenberg_energy_eigenvalues(bond_information, number_sites, tunneling_strength, sparse):
+def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_strength):
     """
     This function takes the bond information for a specific graph
-    and returns its heisenberg hamiltonian matrix in sparse DOK form.
-    """
-    # Initialize variables and empty hamiltonian matrix
-    number_states = 2 ** number_sites
-    rows, columns, data = [], [], []
-
-    # loop over all 2 ^ N - 1 states
-    for state in range(number_states):
-        # loop over all bonds between particles in the state
-        for bond in bond_information:
-            # if the sites are the same
-            if get_bit(state, bond[0]) == get_bit(state, bond[1]):
-                # Then add only the diagonal term j/4 (divide by 4 for the spin of electron)
-                rows.append(state)
-                columns.append(state)
-                data.append(tunneling_strength[bond[2] - 1] / 4)
-            else:
-                # Then subtract the diagonal term j/4 and also add an off diagonal term
-                rows.append(state)
-                columns.append(state)
-                data.append(-(tunneling_strength[bond[2] - 1] / 4))
-                # Flip the bits of the number that corresponds to the sites
-                if get_bit(state, bond[0]):
-                    changed_state = set_bit(clear_bit(state, bond[0]), bond[1])
-                else:
-                    changed_state = clear_bit(set_bit(state, bond[0]), bond[1])
-
-                rows.append(state)
-                columns.append(changed_state)
-                data.append(.5 * tunneling_strength[bond[2] - 1])
-
-    # Construct hamiltonian matrix of csr sparse type
-    hamiltonian_matrix = sp.csr_matrix((data, (rows, columns)), (number_states, number_states))
-
-    # Solve for the eigenvalues of the hamiltonian matrix
-    if sparse:
-        eigenvalues = spl.eigsh(hamiltonian_matrix, return_eigenvectors=False)
-    else:
-        eigenvalues = sl.eigvalsh(hamiltonian_matrix.toarray())
-
-    return(eigenvalues)
-
-@dask.delayed
-def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_strength, sparse):
-    """
-    This function takes the bond information for a specific graph
-    and returns its ising eigenvalues
+    and returns its ising energy eigenvalues
     """
     number_states = 2 ** number_sites
     eigenvalues = []
+    mag = []
 
     for state in range(number_states):
         e_state = 0
         for bond in bond_information:
             if get_bit(state, bond[0]) == get_bit(state, bond[1]):
-                e_state -= .25
+                e_state -= tunneling_strength[bond[2] - 1]
             else:
-                e_state += .25
+                e_state += tunneling_strength[bond[2] - 1]
+
+        mag.append((number_sites - (2 * (bin(state).replace("0b", "").count('1')))))
+        #mag.append((number_sites - (2 * (bin(state).replace("0b", "").count('1')))) / number_sites)
         eigenvalues.append(e_state)
 
-    return(np.array(eigenvalues))
+    return(number_sites, np.array(eigenvalues), np.array(mag))
 
-def write_eigenvalues(eigenvalue_dictionary, order, model, tunneling_strength, base_path):
+def ising_energy_related(input_dict, graph_bond_info_ordered):
     """
-    This function writes the eigenvalues of a specific model and property
-    to the corresponding json file and creates the directory if needed
+    Takes in the graph bond information and returns
+    the property dictionary unordered
     """
-    # Declare write path
-    write_dir = f"{base_path}/{model}"
-    write_path = f"{write_dir}/{order}_{''.join([str(j) for j in tunneling_strength])}.json"
-    # Create directory if it doesn't exist already
-    os.makedirs(write_dir, exist_ok = True)
-    # open eigenvalue write file
-    eigenvalue_write_file = open(write_path)
-    json.dump(eigenvalue_dictionary, eigenvalue_write_file)
-    eigenvalue_write_file.close()
+    benchmarking = input_dict["benchmarking"]
+    temp_range = input_dict["temp_range"]
+    grid_granularity = input_dict["grid_granularity"]
+    tunneling_strength = input_dict["tunneling_strength"]
 
-    return(write_path)
+    temp_grid = np.linspace(temp_range[0], temp_range[1], grid_granularity)
+    eig_dict = {}
+    property_dict = {"Energy": {}, "Specific Heat": {}, "Magnetization": {}, "Susceptibility": {}}
 
-def ed_main(order, cluster_bond_info, model, tunneling_strength):
-    """
-    Main function (for external use): Takes in order, model information and
-    file path for the graph bond information, then it calculates the
-    eigenvalues and returns them to you as an uncomputed dictionary
-    """
-    sparse = order > 2
-    # Load the appropriate graph solver function, preferably
-    # utilizing the dask.delayed framework
-    solver_function = model_property_functions[model]
+    for order, graph_bond_info in graph_bond_info_ordered.items():
+        eig_dict.update({k: find_ising_energy_eigenvalues(v, order, tunneling_strength) for k, v in graph_bond_info.items()})
 
-    # Load graph eigenvalues in using the solver function
-    cluster_eigenvalues = {}
-    for cluster_id in cluster_bond_info:
-        cluster_eigenvalues[cluster_id] = solver_function(cluster_bond_info[cluster_id], order, tunneling_strength, sparse)
+    if benchmarking:
+        pbar = ProgressBar()
+        pbar.register()
 
-    return(cluster_eigenvalues)
+    eig_dict_solved = dask.compute(eig_dict, scheduler = "processes", num_workers=input_dict["number_cores"], threads_per_worker=1)[0]
 
-def main(order, cluster_bond_info_file_path, model, tunneling_strength):
-    """
-    Main function: Takes in order, model information and file path for the graph bond
-    information, then it calculates the eigenvalues and returns them to you as an
-    uncomputed dictionary
-    """
-    sparse = order > 2
-    # Load the graph bond info dictionary
-    cluster_bond_info = load_cluster_bond_info(cluster_bond_info_file_path)
-    # Load the appropriate graph solver function, preferably
-    # utilizing the dask.delayed framework
-    solver_function = model_property_functions[model]
+    if benchmarking:
+        start = time.time()
+        print("Starting Property Solving")
 
-    # Load graph eigenvalues in using the solver function
-    cluster_eigenvalues = {}
-    for cluster_id in cluster_bond_info:
-        cluster_eigenvalues[cluster_id] = solver_function(cluster_bond_info[cluster_id], order, tunneling_strength, sparse)
+    for graph_id, eig_vals in tqdm(eig_dict_solved.items()):
+        number_sites, energy, magnetization = eig_vals
+        property_dict["Energy"][graph_id] = eig_to_property_general(energy, energy, temp_grid, number_sites)
+        property_dict["Specific Heat"][graph_id] = (eig_to_property_general(energy ** 2, energy, temp_grid, number_sites) - (property_dict["Energy"][graph_id] ** 2)) / (temp_grid ** 2) 
 
-    return(cluster_eigenvalues)
+        property_dict["Magnetization"][graph_id] = eig_to_property_general(magnetization, energy, temp_grid, number_sites)
+        property_dict["Susceptibility"][graph_id] = (eig_to_property_general(magnetization ** 2, energy, temp_grid, number_sites) - (property_dict["Magnetization"][graph_id] ** 2)) / (temp_grid) 
+        
+    if benchmarking:
+        print(f"Finished property solving in {time.time() - start:.4f}s")
 
-model_property_functions = {
-        "heisenberg_energy": find_heisenberg_energy_eigenvalues,
-        "ising_energy": find_ising_energy_eigenvalues
-        }
+    return(property_dict, temp_grid)
 
-if __name__ == "__main__":
-    order = eval(sys.argv[1])
-    data_directory = sys.argv[2]
-    nlce_type = sys.argv[3]
-    cluster_eigenvalues = main(order, f"{data_directory}/{nlce_type}/graph_bond_{nlce_type}_{order}.json", "heisenberg_energy", [1, 0.5])
+property_functions = {"ising_energy_related": ising_energy_related}
 
-    start = time.time()
-    cluster_eigenvalues_solved = dask.compute(cluster_eigenvalues, scheduler = "processes", num_workers=8, threads_per_worker=1)
-    print(f"Elapsed Time: {time.time() - start}")
+
+
+
