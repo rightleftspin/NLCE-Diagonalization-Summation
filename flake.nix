@@ -34,6 +34,7 @@
 	  dask[distributed]
 	  ipycytoscape
 	  pandas
+	  tqdm
         '';
       });
     };

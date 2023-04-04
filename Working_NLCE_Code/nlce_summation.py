@@ -101,7 +101,20 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
 #    plt.plot(temp_mc, e_mc, 'k.',label = "MC Data")
 
     if property_name == "Specific Heat":
-        plt.ylim([0, 3])
+        plt.ylim([-0.5, 3])
+
+    elif property_name == "Entropy":
+        plt.ylim([-4, 4])
+    
+    elif property_name == "Energy":
+        plt.ylim([-6, 0.5])
+    
+    elif property_name == "Magnetization":
+        plt.ylim([-0.5, 5])
+
+    elif property_name == "Susceptibility":
+        plt.ylim([-0.5, 5])
+
     plt.legend()
     plt.savefig(save_path)
 
@@ -118,7 +131,15 @@ def main(input_dict):
 
     output_dirs = []
     for prop_name, property_dict in property_dict_all.items():
-        output_dirs.append(plot_property(input_dict, 
+        if prop_name == "Free Energy":
+            free_energy = sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered)
+            entropy = {order: ((free_energy[order] + (avg_en / temp_grid))) for order, avg_en in sum_property(input_dict, property_dict_all["Energy"], graph_mult_ordered, subgraph_mult_ordered).items()}
+            output_dirs.append(plot_property(input_dict, 
+                                         entropy,
+                                         temp_grid, 
+                                         "Entropy"))
+        else:
+            output_dirs.append(plot_property(input_dict, 
                                          sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered),
                                          temp_grid, 
                                          prop_name))

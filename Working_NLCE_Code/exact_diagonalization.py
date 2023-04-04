@@ -29,6 +29,15 @@ def eig_to_property_general(property_array, energy_array, temp_grid, number_site
 
     return(final_prop)
 
+def get_free_energy(energy_array, temp_grid):
+    """
+    Returns partition function of given energy eigenvalues
+    """
+    exp_energy_temp_matrix = np.exp(-energy_array[:, np.newaxis] / temp_grid)
+    partition_function = exp_energy_temp_matrix.sum(axis=0)
+
+    return(np.log(partition_function))
+
 @dask.delayed
 def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_strength):
     """
@@ -39,6 +48,7 @@ def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_stre
     eigenvalues = []
     mag = []
 
+    h = 0.1
     for state in range(number_states):
         e_state = 0
         for bond in bond_information:
@@ -47,9 +57,9 @@ def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_stre
             else:
                 e_state += tunneling_strength[bond[2] - 1]
 
-        mag.append((number_sites - (2 * (bin(state).replace("0b", "").count('1')))))
-        #mag.append((number_sites - (2 * (bin(state).replace("0b", "").count('1')))) / number_sites)
-        eigenvalues.append(e_state)
+        net_spin = (2 * (bin(state).replace("0b", "").count('1'))) - number_sites
+        mag.append(net_spin)
+        eigenvalues.append(e_state - (h * net_spin))
 
     return(number_sites, np.array(eigenvalues), np.array(mag))
 
@@ -63,9 +73,9 @@ def ising_energy_related(input_dict, graph_bond_info_ordered):
     grid_granularity = input_dict["grid_granularity"]
     tunneling_strength = input_dict["tunneling_strength"]
 
-    temp_grid = np.linspace(temp_range[0], temp_range[1], grid_granularity)
+    temp_grid = np.logspace(temp_range[0], temp_range[1], num = grid_granularity)
     eig_dict = {}
-    property_dict = {"Energy": {}, "Specific Heat": {}, "Magnetization": {}, "Susceptibility": {}}
+    property_dict = {"Energy": {}, "Specific Heat": {}, "Magnetization": {}, "Susceptibility": {}, "Free Energy": {}}
 
     for order, graph_bond_info in graph_bond_info_ordered.items():
         eig_dict.update({k: find_ising_energy_eigenvalues(v, order, tunneling_strength) for k, v in graph_bond_info.items()})
@@ -74,7 +84,7 @@ def ising_energy_related(input_dict, graph_bond_info_ordered):
         pbar = ProgressBar()
         pbar.register()
 
-    eig_dict_solved = dask.compute(eig_dict, scheduler = "processes", num_workers=input_dict["number_cores"], threads_per_worker=1)[0]
+    eig_dict_solved = dask.compute(eig_dict, scheduler = "processes", num_workers=input_dict["number_cores"])[0]
 
     if benchmarking:
         start = time.time()
@@ -87,7 +97,11 @@ def ising_energy_related(input_dict, graph_bond_info_ordered):
 
         property_dict["Magnetization"][graph_id] = eig_to_property_general(magnetization, energy, temp_grid, number_sites)
         property_dict["Susceptibility"][graph_id] = (eig_to_property_general(magnetization ** 2, energy, temp_grid, number_sites) - (property_dict["Magnetization"][graph_id] ** 2)) / (temp_grid) 
+
+        property_dict["Free Energy"][graph_id] = get_free_energy(energy, temp_grid)
         
+    #property_dict_solved = dask.compute(property_dict, scheduler = "processes", num_workers=input_dict["number_cores"])[0]
+
     if benchmarking:
         print(f"Finished property solving in {time.time() - start:.4f}s")
 
