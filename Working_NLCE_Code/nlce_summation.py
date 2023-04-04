@@ -85,7 +85,7 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     if benchmarking:
         print(f"Plotting {property_name}")
 
-    plt.figure()
+    #plt.figure()
     for order in range(starting_order_plot, final_order + 1):
         
         plot_prop = weight_dict[order]
@@ -104,7 +104,9 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
         plt.ylim([-0.5, 3])
 
     elif property_name == "Entropy":
-        plt.ylim([-4, 4])
+        plt.ylim([0, 1.5])
+        plt.axhline(0, color='k')
+        plt.axhline(np.log(2), color='k')
     
     elif property_name == "Energy":
         plt.ylim([-6, 0.5])
@@ -118,6 +120,7 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     plt.legend()
     plt.savefig(save_path)
 
+    plt.close()
     if benchmarking:
         print(f"Finished Plotting {property_name}")
 

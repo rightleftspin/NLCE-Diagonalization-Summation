@@ -10,5 +10,5 @@
 	"fig_output_dir": "./figs_out",
 	"output_dir": "./Data/Property_Data",
 	"number_cores": 8,
-	"benchmarking": true
+	"benchmarking": false
 }

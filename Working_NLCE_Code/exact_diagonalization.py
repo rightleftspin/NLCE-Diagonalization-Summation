@@ -88,9 +88,12 @@ def ising_energy_related(input_dict, graph_bond_info_ordered):
 
     if benchmarking:
         start = time.time()
+        eig_dict_items = tqdm(eig_dict_solved.items())
         print("Starting Property Solving")
+    else:
+        eig_dict_items = eig_dict_solved.items()
 
-    for graph_id, eig_vals in tqdm(eig_dict_solved.items()):
+    for graph_id, eig_vals in eig_dict_items:
         number_sites, energy, magnetization = eig_vals
         property_dict["Energy"][graph_id] = eig_to_property_general(energy, energy, temp_grid, number_sites)
         property_dict["Specific Heat"][graph_id] = (eig_to_property_general(energy ** 2, energy, temp_grid, number_sites) - (property_dict["Energy"][graph_id] ** 2)) / (temp_grid ** 2) 
