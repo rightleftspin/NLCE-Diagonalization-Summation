@@ -1,6 +1,6 @@
 {
 	"geometry": "triangle",
-	"final_order": 14,
+	"final_order": 10,
 	"tunneling_strength": [0.25],
 	"property": "ising",
 	"temp_range": [-1, 1],

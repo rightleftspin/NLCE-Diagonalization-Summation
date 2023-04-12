@@ -85,7 +85,6 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     if benchmarking:
         print(f"Plotting {property_name}")
 
-    #plt.figure()
     for order in range(starting_order_plot, final_order + 1):
         
         plot_prop = weight_dict[order]
@@ -121,11 +120,6 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     elif property_name == "Free Energy":
         plt.ylim([0, 1])
 
-    elif property_name == "Entropy Summed":
-        plt.ylim([0, ])
-        #plt.xlim([.01, 10])
-        pass
-
     plt.legend()
     plt.savefig(save_path)
 
@@ -137,43 +131,43 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
 
 def main(input_dict):
     benchmarking = input_dict["benchmarking"]
-    output_dir = f"{input_dict['output_dir']}/{input_dict['geometry']}/{input_dict['property']}/{input_dict['final_order']}"
 
     graph_bond_info_ordered, graph_mult_ordered, subgraph_mult_ordered = load_dict(input_dict)
 
-    if os.path.exists(output_dir) and input_dict["use_existing_data"]:
+    property_data_dir = f"{input_dict['output_dir']}/{input_dict['geometry']}/{input_dict['property']}/{input_dict['final_order']}"
+
+    if input_dict["use_existing_data"]:
         if benchmarking:
-            print("Loading Old Data")
-        property_info = open(f"{output_dir}/property_info.pkl", 'rb')
-        temp_info = f"{output_dir}/temp_info.npy"
-        property_dict_all, temp_grid = pickle.load(property_info), np.load(temp_info)
+            print(f"Loading existing data from {property_data_dir}")
+
+        property_info = open(f"{property_data_dir}/property_info.pkl", 'rb')
+        property_dict_all = pickle.load(property_info)
+        temp_grid = property_dict_all.pop('temp_grid')
+
     else:
         if benchmarking:
             print("Computing New Data")
-        property_dict_all, temp_grid = ed.property_functions[input_dict["property"]](input_dict, graph_bond_info_ordered)
-        os.makedirs(output_dir, exist_ok=True)
-        property_info = open(f"{output_dir}/property_info.pkl", 'wb')
-        np.save(f"{output_dir}/temp_info", temp_grid)
+        property_dict_before_nlce_sum, temp_grid = ed.property_functions[input_dict["property"]](input_dict, graph_bond_info_ordered)
+
+        property_dict_all = {}
+        # This is a hacky solution, but it works since Energy sorts before Free Energy :)
+        for prop_name, pre_summed in sorted(property_dict_before_nlce_sum.items()):
+            property_dict_all[prop_name] = sum_property(input_dict, copy.deepcopy(pre_summed), graph_mult_ordered, subgraph_mult_ordered)
+            if prop_name == "Free Energy":
+                property_dict_all["Entropy"] = {order: ((property_dict_all["Free Energy"][order] + (avg_en / temp_grid))) for order, avg_en in copy.deepcopy(property_dict_all["Energy"]).items()}
+
+        os.makedirs(property_data_dir, exist_ok=True)
+        property_info = open(f"{property_data_dir}/property_info.pkl", 'wb')
+        property_dict_all["temp_grid"] = temp_grid
         pickle.dump(property_dict_all, property_info)
+        # Don't worry about it shhhh it works
+        property_dict_all.pop("temp_grid")
 
     output_dirs = []
-    for prop_name, property_dict in property_dict_all.items():
-        if prop_name == "Free Energy":
-            free_energy = sum_property(input_dict, copy.deepcopy(property_dict), graph_mult_ordered, subgraph_mult_ordered)
-            entropy = {order: ((free_energy[order] + (avg_en / temp_grid))) for order, avg_en in sum_property(input_dict, copy.deepcopy(property_dict_all["Energy"]), graph_mult_ordered, subgraph_mult_ordered).items()}
-
-            output_dirs.append(plot_property(input_dict, 
-                                         free_energy,
-                                         temp_grid, 
-                                         "Free Energy"))
-
-            output_dirs.append(plot_property(input_dict, 
-                                         entropy,
-                                         temp_grid, 
-                                         "Entropy"))
-        else:
-            output_dirs.append(plot_property(input_dict, 
-                                         sum_property(input_dict, copy.deepcopy(property_dict), graph_mult_ordered, subgraph_mult_ordered),
+    for prop_name, summed_property in property_dict_all.items():
+        
+        output_dirs.append(plot_property(input_dict, 
+                                         summed_property,
                                          temp_grid, 
                                          prop_name))
 
