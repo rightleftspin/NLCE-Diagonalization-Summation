@@ -1,4 +1,4 @@
-import json, sys, time
+import json, sys, time, copy, os, pickle
 import numpy as np
 import pandas as pd
 import exact_diagonalization as ed
@@ -104,18 +104,27 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
         plt.ylim([-0.5, 3])
 
     elif property_name == "Entropy":
-        plt.ylim([0, 1.5])
+        plt.ylim([0.3, 0.7])
+        plt.xlim([.01, 10])
         plt.axhline(0, color='k')
         plt.axhline(np.log(2), color='k')
     
     elif property_name == "Energy":
-        plt.ylim([-6, 0.5])
+        plt.ylim([-1, 0.5])
     
     elif property_name == "Magnetization":
         plt.ylim([-0.5, 5])
 
     elif property_name == "Susceptibility":
         plt.ylim([-0.5, 5])
+
+    elif property_name == "Free Energy":
+        plt.ylim([0, 1])
+
+    elif property_name == "Entropy Summed":
+        plt.ylim([0, ])
+        #plt.xlim([.01, 10])
+        pass
 
     plt.legend()
     plt.savefig(save_path)
@@ -127,23 +136,44 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     return(save_path)
 
 def main(input_dict):
+    benchmarking = input_dict["benchmarking"]
+    output_dir = f"{input_dict['output_dir']}/{input_dict['geometry']}/{input_dict['property']}/{input_dict['final_order']}"
 
     graph_bond_info_ordered, graph_mult_ordered, subgraph_mult_ordered = load_dict(input_dict)
-    
-    property_dict_all, temp_grid = ed.property_functions[input_dict["property"]](input_dict, graph_bond_info_ordered)
+
+    if os.path.exists(output_dir) and input_dict["use_existing_data"]:
+        if benchmarking:
+            print("Loading Old Data")
+        property_info = open(f"{output_dir}/property_info.pkl", 'rb')
+        temp_info = f"{output_dir}/temp_info.npy"
+        property_dict_all, temp_grid = pickle.load(property_info), np.load(temp_info)
+    else:
+        if benchmarking:
+            print("Computing New Data")
+        property_dict_all, temp_grid = ed.property_functions[input_dict["property"]](input_dict, graph_bond_info_ordered)
+        os.makedirs(output_dir, exist_ok=True)
+        property_info = open(f"{output_dir}/property_info.pkl", 'wb')
+        np.save(f"{output_dir}/temp_info", temp_grid)
+        pickle.dump(property_dict_all, property_info)
 
     output_dirs = []
     for prop_name, property_dict in property_dict_all.items():
         if prop_name == "Free Energy":
-            free_energy = sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered)
-            entropy = {order: ((free_energy[order] + (avg_en / temp_grid))) for order, avg_en in sum_property(input_dict, property_dict_all["Energy"], graph_mult_ordered, subgraph_mult_ordered).items()}
+            free_energy = sum_property(input_dict, copy.deepcopy(property_dict), graph_mult_ordered, subgraph_mult_ordered)
+            entropy = {order: ((free_energy[order] + (avg_en / temp_grid))) for order, avg_en in sum_property(input_dict, copy.deepcopy(property_dict_all["Energy"]), graph_mult_ordered, subgraph_mult_ordered).items()}
+
+            output_dirs.append(plot_property(input_dict, 
+                                         free_energy,
+                                         temp_grid, 
+                                         "Free Energy"))
+
             output_dirs.append(plot_property(input_dict, 
                                          entropy,
                                          temp_grid, 
                                          "Entropy"))
         else:
             output_dirs.append(plot_property(input_dict, 
-                                         sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered),
+                                         sum_property(input_dict, copy.deepcopy(property_dict), graph_mult_ordered, subgraph_mult_ordered),
                                          temp_grid, 
                                          prop_name))
 

@@ -48,14 +48,14 @@ def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_stre
     eigenvalues = []
     mag = []
 
-    h = 0.1
+    h = 0
     for state in range(number_states):
         e_state = 0
         for bond in bond_information:
             if get_bit(state, bond[0]) == get_bit(state, bond[1]):
-                e_state -= tunneling_strength[bond[2] - 1]
-            else:
                 e_state += tunneling_strength[bond[2] - 1]
+            else:
+                e_state -= tunneling_strength[bond[2] - 1]
 
         net_spin = (2 * (bin(state).replace("0b", "").count('1'))) - number_sites
         mag.append(net_spin)
@@ -63,7 +63,7 @@ def find_ising_energy_eigenvalues(bond_information, number_sites, tunneling_stre
 
     return(number_sites, np.array(eigenvalues), np.array(mag))
 
-def ising_energy_related(input_dict, graph_bond_info_ordered):
+def ising_all(input_dict, graph_bond_info_ordered):
     """
     Takes in the graph bond information and returns
     the property dictionary unordered
@@ -103,15 +103,80 @@ def ising_energy_related(input_dict, graph_bond_info_ordered):
 
         property_dict["Free Energy"][graph_id] = get_free_energy(energy, temp_grid)
         
-    #property_dict_solved = dask.compute(property_dict, scheduler = "processes", num_workers=input_dict["number_cores"])[0]
+    if benchmarking:
+        print(f"Finished property solving in {time.time() - start:.4f}s")
+
+    return(property_dict, temp_grid)
+
+@dask.delayed
+def find_heisenberg_eigenvalues(bond_information, number_sites, tunneling_strength):
+    """
+    This function takes the bond information for a specific graph
+    and returns its heisenberg energy eigenvalues
+    """
+    number_states = 2 ** number_sites
+    eigenvalues = []
+    mag = []
+
+    h = 0
+    for state in range(number_states):
+        e_state = 0
+        for bond in bond_information:
+            if get_bit(state, bond[0]) == get_bit(state, bond[1]):
+                e_state += tunneling_strength[bond[2] - 1]
+            else:
+                e_state -= tunneling_strength[bond[2] - 1]
+
+        net_spin = (2 * (bin(state).replace("0b", "").count('1'))) - number_sites
+        mag.append(net_spin)
+        eigenvalues.append(e_state - (h * net_spin))
+
+    return(number_sites, np.array(eigenvalues), np.array(mag))
+
+def heisenberg_all(input_dict, graph_bond_info_ordered):
+    """
+    Takes in the graph bond information and returns
+    the property dictionary unordered
+    """
+    benchmarking = input_dict["benchmarking"]
+    temp_range = input_dict["temp_range"]
+    grid_granularity = input_dict["grid_granularity"]
+    tunneling_strength = input_dict["tunneling_strength"]
+
+    temp_grid = np.logspace(temp_range[0], temp_range[1], num = grid_granularity)
+    eig_dict = {}
+    property_dict = {"Energy": {}, "Specific Heat": {}, "Magnetization": {}, "Susceptibility": {}, "Free Energy": {}}
+
+    for order, graph_bond_info in graph_bond_info_ordered.items():
+        eig_dict.update({k: find_ising_energy_eigenvalues(v, order, tunneling_strength) for k, v in graph_bond_info.items()})
+
+    if benchmarking:
+        pbar = ProgressBar()
+        pbar.register()
+
+    eig_dict_solved = dask.compute(eig_dict, scheduler = "processes", num_workers=input_dict["number_cores"])[0]
+
+    if benchmarking:
+        start = time.time()
+        eig_dict_items = tqdm(eig_dict_solved.items())
+        print("Starting Property Solving")
+    else:
+        eig_dict_items = eig_dict_solved.items()
+
+    for graph_id, eig_vals in eig_dict_items:
+        number_sites, energy, magnetization = eig_vals
+        property_dict["Energy"][graph_id] = eig_to_property_general(energy, energy, temp_grid, number_sites)
+        property_dict["Specific Heat"][graph_id] = (eig_to_property_general(energy ** 2, energy, temp_grid, number_sites) - (property_dict["Energy"][graph_id] ** 2)) / (temp_grid ** 2)
+
+        property_dict["Magnetization"][graph_id] = eig_to_property_general(magnetization, energy, temp_grid, number_sites)
+        property_dict["Susceptibility"][graph_id] = (eig_to_property_general(magnetization ** 2, energy, temp_grid, number_sites) - (property_dict["Magnetization"][graph_id] ** 2)) / (temp_grid)
+
+        property_dict["Free Energy"][graph_id] = get_free_energy(energy, temp_grid)
 
     if benchmarking:
         print(f"Finished property solving in {time.time() - start:.4f}s")
 
     return(property_dict, temp_grid)
 
-property_functions = {"ising_energy_related": ising_energy_related}
-
-
-
-
+property_functions = {"ising": ising_all,
+                      "heisenberg": heisenberg_all}
