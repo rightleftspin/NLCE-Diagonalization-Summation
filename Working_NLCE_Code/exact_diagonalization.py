@@ -16,6 +16,29 @@ def set_bit(value, n):
 def clear_bit(value, n):
     return value & ~(1 << n)
 
+def flip_bit(value, n):
+    return value ^ (1 << n)
+
+def swap_bits(value, n, m):
+
+    # Move p1'th to rightmost side
+    bit1 = (value >> n) & 1
+
+    # Move p2'th to rightmost side
+    bit2 = (value >> m) & 1
+
+    # XOR the two bits
+    x = (bit1 ^ bit2)
+
+    # Put the xor bit back to their original positions
+    x = (x << n) | (x << m)
+
+    # XOR 'x' with the original number so that the
+    # two sets are swapped
+    result = value ^ x
+    return result
+
+
 def eig_to_property_general(property_array, energy_array, temp_grid, number_sites):
     """
     General purpose summation for a general property
@@ -115,23 +138,25 @@ def find_heisenberg_eigenvalues(bond_information, number_sites, tunneling_streng
     and returns its heisenberg energy eigenvalues
     """
     number_states = 2 ** number_sites
-    eigenvalues = []
+    hamiltonian_matrix = np.zeros((numbers_states, number_states))
     mag = []
 
     h = 0
     for state in range(number_states):
-        e_state = 0
         for bond in bond_information:
-            if get_bit(state, bond[0]) == get_bit(state, bond[1]):
-                e_state += tunneling_strength[bond[2] - 1]
+            site1, site2, bond_strength = get_bit(state, bond[0]), get_bit(state, bond[1]), tunneling_strength[bond[2]]
+            if site1 == site2:
+                hamiltonian_matrix[state, state] += 0.25 * bond_strength
             else:
-                e_state -= tunneling_strength[bond[2] - 1]
-
+                hamiltonian_matrix[state, state] -= 0.25 * bond_strength
+                new_state = flip_bit(flip_bit(state, site1), site2)
+                hamiltonian_matrix[state, new_state] = 0.5 * bond_strength
         net_spin = (2 * (bin(state).replace("0b", "").count('1'))) - number_sites
         mag.append(net_spin)
-        eigenvalues.append(e_state - (h * net_spin))
 
-    return(number_sites, np.array(eigenvalues), np.array(mag))
+    eigenvalues = sl.eigh(hamiltonian_matrix, eigvals_only = True)
+
+    return(number_sites, eigenvalues, np.array(mag))
 
 def heisenberg_all(input_dict, graph_bond_info_ordered):
     """
