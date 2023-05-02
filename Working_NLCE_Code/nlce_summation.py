@@ -4,8 +4,6 @@ import pandas as pd
 import exact_diagonalization as ed
 import matplotlib.pyplot as plt
 
-def euler_resummation(input_dict, weighted_property_dict)
-
 def sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered):
     """
     This function takes in the dictionary (not seperated by order)

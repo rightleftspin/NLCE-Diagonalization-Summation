@@ -1,17 +1,17 @@
 {
-	"geometry": "square",
-	"final_order": 10,
+	"geometry": "triangle",
+	"final_order": 14,
 	"tunneling_strength": [1],
 	"property": "ising",
 	"temp_range": [-1, 1],
 	"grid_granularity": 50,
 	"mag_range": [0, 6],
-	"mag_granularity": 10,
-	"starting_order_plot": 8,
+	"mag_granularity": 30,
+	"starting_order_plot": 10,
 	"nlce_data_dir": "./Data/NLCE_Data",
 	"fig_output_dir": "./figs_out",
 	"output_dir": "./Data/Property_Data",
 	"use_existing_data": false,
-	"number_cores": 8,
-	"benchmarking": true
+	"number_cores": 28,
+	"benchmarking": false
 }
