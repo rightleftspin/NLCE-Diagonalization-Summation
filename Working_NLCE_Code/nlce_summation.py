@@ -4,6 +4,8 @@ import pandas as pd
 import exact_diagonalization as ed
 import matplotlib.pyplot as plt
 
+def euler_resummation(input_dict, weighted_property_dict)
+
 def sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_ordered):
     """
     This function takes in the dictionary (not seperated by order)
@@ -20,7 +22,7 @@ def sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_or
     """
     benchmarking = input_dict["benchmarking"]
     # initialize total_property with all zeros
-    total_property = np.zeros(input_dict["grid_granularity"])
+    total_property = np.zeros_like(list(property_dict.values())[0])
     weighted_property_dict = {}
     # Loop over every order's graph multiplicity
     for order, graph_mult_dict in graph_mult_ordered.items():
@@ -80,6 +82,8 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     starting_order_plot = input_dict["starting_order_plot"]
     final_order = input_dict["final_order"]
     tunneling_strength = input_dict["tunneling_strength"]
+    mag_range = input_dict["mag_range"]
+    mag_granularity = input_dict["mag_granularity"]
     save_path = f"{input_dict['fig_output_dir']}/{input_dict['property']}_{property_name}_{input_dict['geometry']}_{final_order}.pdf"
 
     if benchmarking:
@@ -88,36 +92,63 @@ def plot_property(input_dict, weight_dict, temp_grid, property_name):
     for order in range(starting_order_plot, final_order + 1):
         
         plot_prop = weight_dict[order]
-        plt.plot(temp_grid, plot_prop, label = f"{order}")
+        if property_name == "Magnetization":
+            mag_grid = np.linspace(mag_range[0], mag_range[1], num = mag_granularity)
+            #plt.plot(mag_grid, plot_prop[:, -1], label = f"{order}")
+            plt.plot(temp_grid, plot_prop[2, :], label = f"{order}")
+        elif property_name == "Susceptibility":
+            plt.plot(temp_grid, plot_prop[2, :], label = f"{order}")
+        else:
+            plt.plot(temp_grid, plot_prop, label = f"{order}")
+
+
+    if property_name == "Specific Heat":
+        plt.xlabel("Temperature") 
+        plt.ylabel(f"{property_name}")
+        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength}") 
+        plt.xscale('linear')
+        plt.ylim([0, 1.2])
+        plt.xlim([0, 3])
+
+    elif property_name == "Entropy":
+        plt.xlabel("Temperature") 
+        plt.ylabel(f"{property_name}")
+        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength}") 
+        plt.xscale('linear')
+        plt.xlim([0, 5])
+        plt.ylim([0, 0.7])
+        plt.axhline(0, color='k')
+        plt.axhline(np.log(2), color='k')
+    
+    elif property_name == "Energy":
+        mcdata_ising = pd.read_csv("./Data/Monte_Carlo_Data/mcdata_ising.csv")
+        temp_mc, e_mc = mcdata_ising['T'], mcdata_ising['E']/2500
+        plt.plot(temp_mc, e_mc, 'k.',label = "MC Data")
 
         plt.xlabel("log(Temperature)") 
         plt.ylabel(f"{property_name}")
         plt.title(f"{property_name} vs Temperature for J = {tunneling_strength}") 
         plt.xscale('log')
-
-#    mcdata_ising = pd.read_csv("./mcdata_ising.csv")
-#    temp_mc, e_mc = mcdata_ising['T'], mcdata_ising['E']/2500
-#    plt.plot(temp_mc, e_mc, 'k.',label = "MC Data")
-
-    if property_name == "Specific Heat":
-        plt.ylim([-0.5, 3])
-
-    elif property_name == "Entropy":
-        plt.ylim([0.3, 0.7])
-        plt.xlim([.01, 10])
-        plt.axhline(0, color='k')
-        plt.axhline(np.log(2), color='k')
-    
-    elif property_name == "Energy":
-        plt.ylim([-1, 0.5])
+        plt.ylim([-3, 0.5])
     
     elif property_name == "Magnetization":
-        plt.ylim([-0.5, 5])
+        plt.xlabel("h") 
+        plt.ylabel(f"{property_name}")
+        plt.title(f"{property_name} vs h for J = {tunneling_strength}, T = 2") 
+        plt.xscale('linear')
 
     elif property_name == "Susceptibility":
+        plt.xlabel("log(Temperature)") 
+        plt.ylabel(f"{property_name}")
+        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength}") 
+        plt.xscale('log')
         plt.ylim([-0.5, 5])
 
     elif property_name == "Free Energy":
+        plt.xlabel("log(Temperature)") 
+        plt.ylabel(f"{property_name}")
+        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength}") 
+        plt.xscale('log')
         plt.ylim([0, 1])
 
     plt.legend()
@@ -155,6 +186,7 @@ def main(input_dict):
             property_dict_all[prop_name] = sum_property(input_dict, copy.deepcopy(pre_summed), graph_mult_ordered, subgraph_mult_ordered)
             if prop_name == "Free Energy":
                 property_dict_all["Entropy"] = {order: ((property_dict_all["Free Energy"][order] + (avg_en / temp_grid))) for order, avg_en in copy.deepcopy(property_dict_all["Energy"]).items()}
+
 
         os.makedirs(property_data_dir, exist_ok=True)
         property_info = open(f"{property_data_dir}/property_info.pkl", 'wb')
