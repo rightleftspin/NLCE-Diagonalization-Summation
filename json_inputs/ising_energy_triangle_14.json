@@ -7,11 +7,12 @@
 	"grid_granularity": 50,
 	"mag_range": [0, 6],
 	"mag_granularity": 30,
-	"starting_order_plot": 10,
+	"starting_order_plot": 13,
+	"wynn_cycles": 6,
 	"nlce_data_dir": "./Data/NLCE_Data",
 	"fig_output_dir": "./figs_out",
 	"output_dir": "./Data/Property_Data",
-	"use_existing_data": false,
-	"number_cores": 28,
-	"benchmarking": false
+	"use_existing_data": true,
+	"number_cores": 8,
+	"benchmarking": true
 }

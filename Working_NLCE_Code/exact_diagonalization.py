@@ -54,18 +54,29 @@ def eig_to_property_general(property_array, energy_array, temp_grid, number_site
     final_prop = prop_sum / partition_function
     return(final_prop)
 
-def eig_to_property_3d(property_array, energy_array, mag_grid, temp_grid, number_sites):
+def eig_to_property_3d(property_array, magnetization, energy_array, mag_grid, temp_grid, number_sites):
     """
     General purpose summation for a general property with magnetic field
     """
     temp_3d, mag_3d, energy_3d = np.meshgrid(temp_grid, mag_grid, energy_array)
-    energy_3d = energy_3d - (mag_3d * property_array)
+    energy_3d = energy_3d - (0.5 * (mag_3d * magnetization))
     exp_energy_temp_matrix = np.exp(-energy_3d / temp_3d)
     partition_function = exp_energy_temp_matrix.sum(axis=2)
     prop_sum = np.tensordot(exp_energy_temp_matrix, property_array, axes = ([2, 0]))
 
     final_prop = prop_sum / partition_function
     return(final_prop)
+
+def free_energy_3d(magnetization, energy_array, mag_grid, temp_grid):
+    """
+    General purpose summation for a general property with magnetic field
+    """
+    temp_3d, mag_3d, energy_3d = np.meshgrid(temp_grid, mag_grid, energy_array)
+    energy_3d = energy_3d - (0.5 * (mag_3d * magnetization))
+    exp_energy_temp_matrix = np.exp(-energy_3d / temp_3d)
+    partition_function = exp_energy_temp_matrix.sum(axis=2)
+
+    return(np.log(partition_function))
 
 def get_free_energy(energy_array, temp_grid):
     """
@@ -81,6 +92,7 @@ def find_ising_properties(input_dict, graph_id, bond_information, number_sites):
     """
     This function takes the bond information for a specific graph
     and returns its ising energy eigenvalues
+    Uses spin convention where spin operator returns 1/4
     """
     benchmarking = input_dict["benchmarking"]
     temp_range = input_dict["temp_range"]
@@ -97,9 +109,9 @@ def find_ising_properties(input_dict, graph_id, bond_information, number_sites):
         e_state = 0
         for bond in bond_information:
             if get_bit(state, bond[0]) == get_bit(state, bond[1]):
-                e_state += tunneling_strength[bond[2] - 1]
+                e_state += 0.25 * tunneling_strength[bond[2] - 1]
             else:
-                e_state -= tunneling_strength[bond[2] - 1]
+                e_state -= 0.25 * tunneling_strength[bond[2] - 1]
 
         net_spin = (2 * (bin(state).replace("0b", "").count('1'))) - number_sites
         mag.append(net_spin)
@@ -112,11 +124,11 @@ def find_ising_properties(input_dict, graph_id, bond_information, number_sites):
 
     property_dict = {"Energy": {}, "Specific Heat": {}, "Magnetization": {}, "Susceptibility": {}, "Free Energy": {}}
 
-    property_dict["Energy"][graph_id] = eig_to_property_general(eigenvalues, eigenvalues, temp_grid, number_sites)
-    property_dict["Specific Heat"][graph_id] = (eig_to_property_general(eigenvalues ** 2, eigenvalues, temp_grid, number_sites) - (property_dict["Energy"][graph_id] ** 2)) / (temp_grid ** 2) 
-    property_dict["Magnetization"][graph_id] = eig_to_property_3d(mag, eigenvalues, mag_grid, temp_grid, number_sites)
-    property_dict["Susceptibility"][graph_id] = (eig_to_property_general(mag ** 2, eigenvalues, temp_grid, number_sites) - (property_dict["Magnetization"][graph_id] ** 2)) / (temp_grid) 
-    property_dict["Free Energy"][graph_id] = get_free_energy(eigenvalues, temp_grid)
+    property_dict["Energy"][graph_id] = eig_to_property_3d(eigenvalues, mag, eigenvalues, mag_grid, temp_grid, number_sites)
+    property_dict["Specific Heat"][graph_id] = (eig_to_property_3d(eigenvalues ** 2, mag, eigenvalues, mag_grid, temp_grid, number_sites) - (property_dict["Energy"][graph_id] ** 2)) / (temp_grid ** 2)
+    property_dict["Magnetization"][graph_id] = eig_to_property_3d(mag, mag, eigenvalues, mag_grid, temp_grid, number_sites)
+    property_dict["Susceptibility"][graph_id] = (eig_to_property_3d(mag ** 2, mag, eigenvalues, mag_grid, temp_grid, number_sites) - (property_dict["Magnetization"][graph_id] ** 2)) / (temp_grid)
+    property_dict["Free Energy"][graph_id] = free_energy_3d(mag, eigenvalues, mag_grid, temp_grid)
 
     return(property_dict)
 
@@ -126,9 +138,6 @@ def ising_all(input_dict, graph_bond_info_ordered):
     the property dictionary unordered
     """
     benchmarking = input_dict["benchmarking"]
-    temp_range = input_dict["temp_range"]
-    grid_granularity = input_dict["grid_granularity"]
-    temp_grid = np.logspace(temp_range[0], temp_range[1], num = grid_granularity)
 
     property_list = []
 
@@ -150,7 +159,7 @@ def ising_all(input_dict, graph_bond_info_ordered):
         for property_name, property_value in cluster.items():
             property_dict[property_name].update(property_value)
 
-    return(property_dict, temp_grid)
+    return(property_dict)
 
 @dask.delayed
 def find_heisenberg_eigenvalues(bond_information, number_sites, tunneling_strength):
