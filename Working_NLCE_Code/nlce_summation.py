@@ -219,9 +219,9 @@ def plot_property(input_dict, weight_dict, property_name):
         plt.figure()
         magnetization_index = 0
 
-        #mcdata_ising = pd.read_csv("./Data/Monte_Carlo_Data/mcdata_ising.csv")
-        #temp_mc, e_mc = mcdata_ising['T']/4, mcdata_ising['E']/(2500 * 4)
-        #plt.plot(temp_mc, e_mc, 'k--',label = "MC Data")
+        mcdata_ising = pd.read_csv("./Data/Monte_Carlo_Data/mcdata_ising.csv")
+        temp_mc, e_mc = mcdata_ising['T']/4, mcdata_ising['E']/(2500 * 4)
+        plt.plot(temp_mc, e_mc, 'k--',label = "MC Data")
 
         plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
         plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
