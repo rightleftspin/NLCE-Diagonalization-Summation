@@ -176,178 +176,197 @@ def plot_property(input_dict, weight_dict, property_name):
     if property_name == "Specific Heat":
         plt.figure()
 
-        magnetization_index = 0
+#        magnetization_index = 0
+#
+#        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
+#        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+#        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        plt.xlabel("Temperature") 
+#        plt.ylabel(f"{property_name}")
+#        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
+#        plt.xscale('log')
+#        plt.ylim([0, 1])
+#        #plt.xlim([0, 3])
+#
+#    elif property_name == "Entropy":
+#        plt.figure()
+#
+#        magnetization_index = 0
+#
+#        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
+#        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+#        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        plt.xlabel("Temperature")
+#        plt.ylabel(f"{property_name}")
+#        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
+#        plt.xscale('log')
+#        plt.ylim([0, 1.2])
+#        #plt.xlim([0, 3])
+#
+#    elif property_name == "Energy":
+#        plt.figure()
+#        magnetization_index = 0
+#
+#        mcdata_ising = pd.read_csv("./Data/Monte_Carlo_Data/mcdata_ising.csv")
+#        temp_mc, e_mc = mcdata_ising['T']/4, mcdata_ising['E']/(2500 * 4)
+#        plt.plot(temp_mc, e_mc, 'k--',label = "MC Data")
+#
+#        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
+#        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+#        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        plt.xlabel("Temperature")
+#        plt.ylabel(f"{property_name}")
+#        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
+#        plt.xscale('log')
+#        plt.ylim([-0.4, 0])
+#        plt.xlim([0.3, 3])
+#
+#    elif property_name == "Magnetization":
+#        plt.figure()
+#
+#        """
+#            Temperature Plots for given Magnetization
+#        """
+#        magnetization_indices = np.linspace(2, mag_grid.size - 10, num = 10, dtype = int)
+#
+#        #plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
+#        #plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+#        for magnetization_index in magnetization_indices:
+#            plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], label = f"h = {mag_grid[magnetization_index]:.2f}")
+#
+#        #weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
+#        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        plt.xlabel("Temperature")
+#        plt.ylabel(f"{property_name}")
+#        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]}")
+#        plt.xscale('log')
+#        plt.ylim([0, 1.1])
+#        plt.xlim([0.2, 8])
+#
+#        """
+#            Magnetization plots for given temperature
+#        """
+#        #temp_index = 0
+#
+#        #plt.plot(mag_grid, weight_dict[final_order][:, temp_index], 'r-', label = f"{final_order} sites")
+#        #plt.plot(mag_grid, weight_dict[final_order - 1][:, temp_index], 'r--', label = f"{final_order - 1} sites")
+#        #plt.plot(mag_grid, wynn_resummation(input_dict, weight_dict)[:, temp_index], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        #weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        #plt.plot(mag_grid, euler_resummation(input_dict, weight_dict)[:, temp_index], 'b-', label = f"{final_order} sites (Euler)")
+#        #plt.plot(mag_grid, euler_resummation(input_dict, weight_dict_min_one)[:, temp_index], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        #plt.xlabel("h")
+#        #plt.ylabel(f"{property_name}")
+#        #plt.title(f"{property_name} vs h for J = {tunneling_strength[0]} at T = {temp_grid[temp_index]:.3f}")
+#        #plt.xscale('linear')
+#        #plt.xlim([0, 6])
+#        #plt.ylim([0, 0.6])
+#
+#    elif property_name == "Susceptibility":
+#        plt.figure()
+#        """
+#            Temperature Plots for given Magnetization
+#        """
+#        #magnetization_index = 0
+#
+#        #plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
+#        #plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+#        #plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        #weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
+#        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        #plt.xlabel("Temperature")
+#        #plt.ylabel(f"{property_name}")
+#        #plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
+#        #plt.xscale('log')
+#        #plt.ylim([0, 1])
+#        """
+#            Magnetization plots for given temperature
+#        """
+#        temp_index = 0
+#
+#        plt.plot(mag_grid, weight_dict[final_order][:, temp_index], 'r-', label = f"{final_order} sites")
+#        plt.plot(mag_grid, weight_dict[final_order - 1][:, temp_index], 'r--', label = f"{final_order - 1} sites")
+#        plt.plot(mag_grid, wynn_resummation(input_dict, weight_dict)[:, temp_index], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        plt.plot(mag_grid, euler_resummation(input_dict, weight_dict)[:, temp_index], 'b-', label = f"{final_order} sites (Euler)")
+#        plt.plot(mag_grid, euler_resummation(input_dict, weight_dict_min_one)[:, temp_index], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        plt.xlabel("h")
+#        plt.ylabel(f"{property_name}")
+#        plt.title(f"{property_name} vs h for J = {tunneling_strength[0]} at T = {temp_grid[temp_index]:.3f}")
+#        plt.xscale('linear')
+#        plt.xlim([0, 6])
+#        plt.ylim([0, 0.6])
+#
+#    elif property_name == "Free Energy":
+#        plt.figure()
+#
+#        magnetization_index = 0
+#
+#        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
+#        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+#        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
+#
+#        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
+#
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
+#        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
+#
+#        plt.xlabel("Temperature")
+#        plt.ylabel(f"{property_name}")
+#        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
+#        plt.xscale('log')
+#        plt.ylim([-0.4, 0])
+#        plt.xlim([0.01, 3])
 
-        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
-        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
+    elif property_name == "e":
+        t_array = []
+        t = -2
+        for i in range(50):
+            t += 0.08
+            t_array.append(t)
+        
+        temp = np.exp(np.array(t_array))
 
-        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
 
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        plt.xlabel("Temperature") 
-        plt.ylabel(f"{property_name}")
-        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
-        plt.xscale('log')
-        plt.ylim([0, 1])
-        #plt.xlim([0, 3])
-
-    elif property_name == "Entropy":
         plt.figure()
-
-        magnetization_index = 0
-
-        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
-        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
-
-        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        plt.xlabel("Temperature")
-        plt.ylabel(f"{property_name}")
-        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
+        plt.plot(temp, weight_dict[2], 'r-', label = f"2 sites")
+        plt.plot(temp, weight_dict[3], 'b-', label = f"3 sites")
+        plt.plot(temp, weight_dict[4], 'g-', label = f"4 sites")
+        plt.plot(temp, weight_dict[5], 'y-', label = f"5 sites")
+        plt.ylim([-0.25, 0.1])
         plt.xscale('log')
-        plt.ylim([0, 1.2])
-        #plt.xlim([0, 3])
 
-    elif property_name == "Energy":
-        plt.figure()
-        magnetization_index = 0
-
-        mcdata_ising = pd.read_csv("./Data/Monte_Carlo_Data/mcdata_ising.csv")
-        temp_mc, e_mc = mcdata_ising['T']/4, mcdata_ising['E']/(2500 * 4)
-        plt.plot(temp_mc, e_mc, 'k--',label = "MC Data")
-
-        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
-        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
-
-        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        plt.xlabel("Temperature")
-        plt.ylabel(f"{property_name}")
-        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
-        plt.xscale('log')
-        plt.ylim([-0.4, 0])
-        plt.xlim([0.3, 3])
-
-    elif property_name == "Magnetization":
-        plt.figure()
-
-        """
-            Temperature Plots for given Magnetization
-        """
-        magnetization_indices = np.linspace(2, mag_grid.size - 10, num = 10, dtype = int)
-
-        #plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        #plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
-        for magnetization_index in magnetization_indices:
-            plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], label = f"h = {mag_grid[magnetization_index]:.2f}")
-
-        #weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
-        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        plt.xlabel("Temperature")
-        plt.ylabel(f"{property_name}")
-        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]}")
-        plt.xscale('log')
-        plt.ylim([0, 1.1])
-        plt.xlim([0.2, 8])
-
-        """
-            Magnetization plots for given temperature
-        """
-        #temp_index = 0
-
-        #plt.plot(mag_grid, weight_dict[final_order][:, temp_index], 'r-', label = f"{final_order} sites")
-        #plt.plot(mag_grid, weight_dict[final_order - 1][:, temp_index], 'r--', label = f"{final_order - 1} sites")
-        #plt.plot(mag_grid, wynn_resummation(input_dict, weight_dict)[:, temp_index], 'c', label = f"{final_order} sites (Wynn)")
-
-        #weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        #plt.plot(mag_grid, euler_resummation(input_dict, weight_dict)[:, temp_index], 'b-', label = f"{final_order} sites (Euler)")
-        #plt.plot(mag_grid, euler_resummation(input_dict, weight_dict_min_one)[:, temp_index], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        #plt.xlabel("h")
-        #plt.ylabel(f"{property_name}")
-        #plt.title(f"{property_name} vs h for J = {tunneling_strength[0]} at T = {temp_grid[temp_index]:.3f}")
-        #plt.xscale('linear')
-        #plt.xlim([0, 6])
-        #plt.ylim([0, 0.6])
-
-    elif property_name == "Susceptibility":
-        plt.figure()
-        """
-            Temperature Plots for given Magnetization
-        """
-        #magnetization_index = 0
-
-        #plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        #plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
-        #plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
-
-        #weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
-        #plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        #plt.xlabel("Temperature")
-        #plt.ylabel(f"{property_name}")
-        #plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
-        #plt.xscale('log')
-        #plt.ylim([0, 1])
-        """
-            Magnetization plots for given temperature
-        """
-        temp_index = 0
-
-        plt.plot(mag_grid, weight_dict[final_order][:, temp_index], 'r-', label = f"{final_order} sites")
-        plt.plot(mag_grid, weight_dict[final_order - 1][:, temp_index], 'r--', label = f"{final_order - 1} sites")
-        plt.plot(mag_grid, wynn_resummation(input_dict, weight_dict)[:, temp_index], 'c', label = f"{final_order} sites (Wynn)")
-
-        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        plt.plot(mag_grid, euler_resummation(input_dict, weight_dict)[:, temp_index], 'b-', label = f"{final_order} sites (Euler)")
-        plt.plot(mag_grid, euler_resummation(input_dict, weight_dict_min_one)[:, temp_index], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        plt.xlabel("h")
-        plt.ylabel(f"{property_name}")
-        plt.title(f"{property_name} vs h for J = {tunneling_strength[0]} at T = {temp_grid[temp_index]:.3f}")
-        plt.xscale('linear')
-        plt.xlim([0, 6])
-        plt.ylim([0, 0.6])
-
-    elif property_name == "Free Energy":
-        plt.figure()
-
-        magnetization_index = 0
-
-        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
-        plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
-
-        weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
-
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict)[magnetization_index, :], 'b-', label = f"{final_order} sites (Euler)")
-        plt.plot(temp_grid, euler_resummation(input_dict, weight_dict_min_one)[magnetization_index, :], 'b--', label = f"{final_order - 1} sites (Euler)")
-
-        plt.xlabel("Temperature")
-        plt.ylabel(f"{property_name}")
-        plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
-        plt.xscale('log')
-        plt.ylim([-0.4, 0])
-        plt.xlim([0.01, 3])
-
+    
     plt.legend()
     plt.savefig(save_path)
 
@@ -368,7 +387,7 @@ def main(input_dict):
     property_data_dir = f"{input_dict['output_dir']}/{input_dict['geometry']}/{input_dict['property']}/{input_dict['final_order']}"
     temp_grid = np.logspace(temp_range[0], temp_range[1], num = grid_granularity)
 
-    if input_dict["use_existing_data"]:
+    if not input_dict["use_existing_data"]:
         if benchmarking:
             print(f"Loading existing data from {property_data_dir}")
 
@@ -380,6 +399,18 @@ def main(input_dict):
         if benchmarking:
             print("Computing New Data")
         property_dict_before_nlce_sum = ed.property_functions[input_dict["property"]](input_dict, graph_bond_info_ordered)
+        
+        property_dict_e_data = {'15130871412783076140': np.zeros(50)}
+        for order in range(2, 8):
+            f = list(filter(lambda z: len(z) > 10, open(f'./Data/Property_Data/ani-square-khatami/Graphs_Anistrpc_Triangle_{order}.txt', 'r').readlines()))
+            f_data = open(f'./Data/Property_Data/ani-square-khatami/energy_{order}_sites.bin', 'r')
+
+            x = np.fromfile(f_data).reshape((len(f) * 10_000, 5))
+            e = np.split(x[:, 3], len(f))
+            for ind, graph_id in enumerate(f):
+                property_dict_e_data[str(int(graph_id))] = e[ind][50 * 150: 50 * 151] 
+
+        property_dict_before_nlce_sum["e"] = property_dict_e_data
 
         property_dict_all = {}
         # This is a hacky solution, but it works since Energy sorts before Free Energy :)
