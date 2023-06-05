@@ -1,7 +1,7 @@
 {
-	"geometry": "square_off",
-	"final_order": 8,
-	"tunneling_strength": [0, 1],
+	"geometry": "ani-triangle",
+	"final_order": 7,
+	"tunneling_strength": [1, 0.25],
 	"property": "ising",
 	"temp_range": [-1, 1],
 	"grid_granularity": 50,

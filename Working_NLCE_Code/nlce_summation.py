@@ -116,7 +116,7 @@ def sum_property(input_dict, property_dict, graph_mult_ordered, subgraph_mult_or
                 subgraph_mult_dict = subgraph_mult_ordered[order]
                 for subgraph_id, subgraph_mult in subgraph_mult_dict[graph_id].items():
                     # And subtract their weights (according to the subgraph multiplicity)
-                    graph_weight -= subgraph_mult * property_dict[subgraph_id]
+                    graph_weight -= subgraph_mult[1] * property_dict[subgraph_id]
 
             # update the total property with the property of the given graph
             total_property += graph_mult * graph_weight
@@ -223,8 +223,11 @@ def plot_property(input_dict, weight_dict, property_name):
         temp_mc, e_mc = mcdata_ising['T']/4, mcdata_ising['E']/(2500 * 4)
         plt.plot(temp_mc, e_mc, 'k--',label = "MC Data")
 
-        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r-', label = f"{final_order} sites")
-        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'r--', label = f"{final_order - 1} sites")
+        plt.plot(temp_grid, weight_dict[final_order][magnetization_index, :], 'r', label = f"{final_order} sites")
+        plt.plot(temp_grid, weight_dict[final_order - 1][magnetization_index, :], 'g', label = f"{final_order - 1} sites")
+        plt.plot(temp_grid, weight_dict[final_order - 2][magnetization_index, :], 'b', label = f"{final_order - 2} sites")
+        #plt.plot(temp_grid, weight_dict[final_order - 3][magnetization_index, :], 'y', label = f"{final_order - 3} sites")
+        #plt.plot(temp_grid, weight_dict[final_order - 4][magnetization_index, :], 'k', label = f"{final_order - 4} sites")
         plt.plot(temp_grid, wynn_resummation(input_dict, weight_dict)[magnetization_index, :], 'c', label = f"{final_order} sites (Wynn)")
 
         weight_dict_min_one = {k:weight_dict[k] for k in range(final_order) if k in weight_dict}
@@ -236,8 +239,8 @@ def plot_property(input_dict, weight_dict, property_name):
         plt.ylabel(f"{property_name}")
         plt.title(f"{property_name} vs Temperature for J = {tunneling_strength[0]} at h = {mag_grid[magnetization_index]:.3f}")
         plt.xscale('log')
-        plt.ylim([-0.4, 0])
-        plt.xlim([0.3, 3])
+        plt.ylim([-0.35, 0])
+        plt.xlim([0.3, 8])
 
     elif property_name == "Magnetization":
         plt.figure()
