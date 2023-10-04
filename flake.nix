@@ -35,6 +35,7 @@
 	  ipycytoscape
 	  pandas
 	  tqdm
+	  pyqt5
         '';
       });
     };
