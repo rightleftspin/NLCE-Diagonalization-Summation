@@ -25,6 +25,10 @@ temperature_8, data_8 = open_dat_file(order_8)
 order_7 = "Bare_Obsrvbls_7_site.dat"
 temperature_7, data_7 = open_dat_file(order_7)
 
+wynn = "Wynn03_Obsrvbls_2_site.dat"
+temperature_w, data_w = open_dat_file(wynn)
+
+
 plt.figure()
 plt.xlabel("Temperature")
 plt.ylabel("entropy")
@@ -35,5 +39,6 @@ print(data_9[20][0, 0])
 plt.plot(temperature_9, data_9[20][:, 11], label = "9")
 plt.plot(temperature_8, data_8[20][:, 11], label = "8")
 plt.plot(temperature_7, data_7[20][:, 11], label = "7")
+plt.plot(temperature_w, data_w[20][:, 11], label = "wynn")
 plt.legend()
 plt.savefig("entropy_temp.pdf")
